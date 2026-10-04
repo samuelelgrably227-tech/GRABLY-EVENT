@@ -277,7 +277,7 @@ function renderPreview(){
     body=`${f.app?`<p><b>1.</b> Installez l'application <b>${esc(f.app)}</b>${(f.appIos||f.appAndroid)?' : '+[f.appIos?link(f.appIos)+' (iPhone)':'',f.appAndroid?link(f.appAndroid)+' (Android)':''].filter(Boolean).join(' · '):''}.</p>`:''}
       ${links.length?`<p><b>${f.app?'2':'1'}.</b> Ouvrez ${links.length>1?'les liens':'le lien'} ci-dessous <b>depuis votre téléphone</b> :</p><div class="box">${links.map(link).join('<br>')}</div>`:''}
       ${f.instructions?`<p>${esc(f.instructions).replace(/\n/g,'<br>')}</p>`:''}
-      <p style="color:#4A4C53;font-size:13px">Pensez à le faire avant le jour J, et n'hésitez pas à me poser vos questions si besoin.</p>`;
+      <p style="color:#4A4C53;font-size:13px">Nous vous recommandons d'effectuer cette étape dès réception de ce mail, afin de pouvoir résoudre sereinement toute difficulté avant le jour J.</p>`;
   }
   $('preview').innerHTML=`<div class="subj"><b>À :</b> ${esc(f.to)||'…'} &nbsp;·&nbsp; <b>Objet :</b> ${esc(subject)}${att.length?` &nbsp;·&nbsp; <b>${att.length} pièce${att.length>1?'s':''} jointe${att.length>1?'s':''}</b> (${fmtSize(totalSize()*0.75)})`:''}</div>
     <div style="font-size:18px;font-weight:700;margin-bottom:16px"><span style="color:#E3242B">G</span>E&nbsp; Grably Event</div>
