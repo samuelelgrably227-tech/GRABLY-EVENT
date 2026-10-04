@@ -66,7 +66,7 @@
   .preview td { padding:5px 0; font-size:13px; vertical-align:top; }
   .preview td:first-child { color:#4A4C53; width:130px; }
   .preview td:last-child { font-weight:600; }
-  .preview a { color:#E3242B; font-weight:600; word-break:break-all; }
+  .preview a { color:#1a73e8; text-decoration:underline; font-weight:600; word-break:break-all; }
   .preview .box { background:#F4F3EF; border-radius:10px; padding:10px 14px; margin:0 0 12px; }
   .preview .sig { border-top:1px solid #e4e2dc; padding-top:14px; margin-top:18px; font-size:12px; color:#4A4C53; line-height:1.7; }
 
@@ -273,11 +273,11 @@ function renderPreview(){
   } else {
     const links=f.liens.split('\n').map(s=>s.trim()).filter(Boolean);
     subject=`Vos places pour ${f.evenement||'votre événement'} – accès mobile`;
-    intro=`Vos places pour <b>${esc(f.evenement)||'…'}</b> sont disponibles sur mobile.`;
+    intro=`Vos places pour <b>${esc(f.evenement)||'…'}</b> vous attendent : voici comment les récupérer.`;
     body=`${f.app?`<p><b>1.</b> Installez l'application <b>${esc(f.app)}</b>${(f.appIos||f.appAndroid)?' : '+[f.appIos?link(f.appIos)+' (iPhone)':'',f.appAndroid?link(f.appAndroid)+' (Android)':''].filter(Boolean).join(' · '):''}.</p>`:''}
       ${links.length?`<p><b>${f.app?'2':'1'}.</b> Ouvrez ${links.length>1?'les liens':'le lien'} ci-dessous <b>depuis votre téléphone</b> :</p><div class="box">${links.map(link).join('<br>')}</div>`:''}
       ${f.instructions?`<p>${esc(f.instructions).replace(/\n/g,'<br>')}</p>`:''}
-      <p style="color:#4A4C53;font-size:13px">Faites cette étape avant le jour J, avec une bonne connexion : les billets s'affichent ensuite dans l'application, même hors ligne.</p>`;
+      <p style="color:#4A4C53;font-size:13px">Pensez à le faire avant le jour J, et n'hésitez pas à me poser vos questions si besoin.</p>`;
   }
   $('preview').innerHTML=`<div class="subj"><b>À :</b> ${esc(f.to)||'…'} &nbsp;·&nbsp; <b>Objet :</b> ${esc(subject)}${att.length?` &nbsp;·&nbsp; <b>${att.length} pièce${att.length>1?'s':''} jointe${att.length>1?'s':''}</b> (${fmtSize(totalSize()*0.75)})`:''}</div>
     <div style="font-size:18px;font-weight:700;margin-bottom:16px"><span style="color:#E3242B">G</span>E&nbsp; Grably Event</div>
