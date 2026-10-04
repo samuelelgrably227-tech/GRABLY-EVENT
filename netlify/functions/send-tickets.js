@@ -55,7 +55,7 @@ exports.handler = async (event) => {
       ${links.length ? `<p style="font-size:15px;line-height:1.6;margin:0 0 10px"><b>${b.app ? '2' : '1'}.</b> Ouvrez ${links.length > 1 ? 'les liens' : 'le lien'} ci-dessous <b>depuis votre téléphone</b> :</p>
       <div style="margin:0 0 14px;padding:12px 16px;background:#F4F3EF;border-radius:10px;font-size:14px;line-height:1.8">${links.map(link).join('<br>')}</div>` : ''}
       ${b.instructions ? `<p style="font-size:15px;line-height:1.6;margin:0 0 14px">${nl(b.instructions)}</p>` : ''}
-      <p style="font-size:14px;line-height:1.6;margin:0 0 14px;color:#4A4C53">Pensez à le faire avant le jour J, et n'hésitez pas à me poser vos questions si besoin.</p>`;
+      <p style="font-size:14px;line-height:1.6;margin:0 0 14px;color:#4A4C53">Nous vous recommandons d'effectuer cette étape dès réception de ce mail, afin de pouvoir résoudre sereinement toute difficulté avant le jour J.</p>`;
   }
 
   const html = `
