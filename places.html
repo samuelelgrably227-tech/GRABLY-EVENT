@@ -128,8 +128,9 @@
     </div>
 
     <div class="mode-panel active" id="panel-transfert" style="margin-top:16px">
-      <div class="form-row two">
-        <div class="form-group"><label>Plateforme</label><input id="t-plateforme" placeholder="Application PSG, Ticketmaster, Roland-Garros…"></div>
+      <div class="form-row three">
+        <div class="form-group"><label>Plateforme (présélection)</label><select id="t-preset" onchange="applyPlatformPreset()"></select></div>
+        <div class="form-group"><label>Plateforme (nom affiché)</label><input id="t-plateforme" placeholder="Fan Wallet, Ticketmaster…"></div>
         <div class="form-group"><label>Compte du client (e-mail ou identifiant)</label><input id="t-compte" placeholder="jean@exemple.com"></div>
       </div>
       <div class="form-group"><label>Preuves du transfert (captures d'écran)</label>
@@ -148,9 +149,10 @@
     </div>
 
     <div class="mode-panel" id="panel-mobile" style="margin-top:16px">
+      <div class="form-group" style="margin-bottom:14px"><label>Application (présélection)</label><select id="m-preset" onchange="applyAppPreset()"></select><div class="hint">Remplit automatiquement le nom, les liens App Store / Google Play et des instructions par défaut. Tout reste modifiable.</div></div>
       <div class="form-group" style="margin-bottom:14px"><label>Lien(s) à ouvrir sur le téléphone</label><textarea id="m-liens" placeholder="Un lien par ligne"></textarea></div>
       <div class="form-row three">
-        <div class="form-group"><label>Application à installer (optionnel)</label><input id="m-app" placeholder="Ticketmaster, Billetterie PSG…"></div>
+        <div class="form-group"><label>Application à installer (optionnel)</label><input id="m-app" placeholder="Ticketmaster, Fan Wallet…"></div>
         <div class="form-group"><label>Lien App Store (optionnel)</label><input id="m-ios" placeholder="https://apps.apple.com/…"></div>
         <div class="form-group"><label>Lien Google Play (optionnel)</label><input id="m-android" placeholder="https://play.google.com/…"></div>
       </div>
@@ -201,6 +203,36 @@ function setMode(m){
 function toast(msg, d=3000){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'), d); }
 function esc(t){ return String(t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function fmtSize(n){ return n>1e6 ? (n/1e6).toFixed(1)+' Mo' : Math.round(n/1e3)+' Ko'; }
+
+
+/* ---------- Applications pré-enregistrées ---------- */
+const PS = q => 'https://play.google.com/store/search?q=' + encodeURIComponent(q) + '&c=apps';
+const AS = q => 'https://search.itunes.apple.com/WebObjects/MZSearch.woa/wa/search?media=software&term=' + encodeURIComponent(q);
+const APPS = [
+  { name:'Fan Wallet (Ticketmaster France)', app:'Fan Wallet', ios:'https://apps.apple.com/fr/app/fan-wallet/id6467234586', android:PS('Fan Wallet Ticketmaster'), instr:"Créez votre compte Fan Wallet avec l'adresse e-mail de cette commande, puis acceptez le transfert dans l'onglet « Mes billets »." },
+  { name:'Ticketmaster (UK / US / international)', app:'Ticketmaster', ios:AS('Ticketmaster'), android:PS('Ticketmaster'), instr:"Connectez-vous à l'application Ticketmaster avec le compte indiqué, puis acceptez le transfert dans « My Events »." },
+  { name:'Ticketmaster España', app:'Ticketmaster España', ios:AS('Ticketmaster España'), android:PS('Ticketmaster España'), instr:"Conectez-vous à l'application Ticketmaster España avec le compte indiqué, puis acceptez le transfert dans « Mis entradas »." },
+  { name:'Fnac Spectacles', app:'Fnac Spectacles', ios:'https://apps.apple.com/fr/app/fnac-spectacles/id1643523286', android:PS('Fnac Spectacles'), instr:"Connectez-vous à l'application Fnac Spectacles avec l'adresse e-mail de cette commande : vos billets apparaissent dans « Mes billets »." },
+  { name:'Stade de France (STADEFRANCE Tickets)', app:'STADEFRANCE Tickets', ios:'https://apps.apple.com/fr/app/stadefrance-tickets/id1615738757', android:PS('STADEFRANCE Tickets'), instr:"Créez votre compte avec l'adresse e-mail de cette commande, puis acceptez le transfert dans « Mes billets »." },
+  { name:'Roland-Garros Officiel', app:'Roland-Garros Officiel', ios:'https://apps.apple.com/fr/app/roland-garros-officiel/id1371584793', android:PS('Roland-Garros Officiel'), instr:"Connectez-vous avec le compte indiqué, puis passez en mode « Spectateur » (en haut à droite) pour retrouver vos billets." },
+  { name:'AXS', app:'AXS', ios:AS('AXS Tickets'), android:PS('AXS Tickets'), instr:"Créez votre compte AXS avec l'adresse e-mail de cette commande, puis acceptez le transfert dans « Your Events »." },
+  { name:'Weezevent', app:'Weezevent', ios:AS('Weezevent'), android:PS('Weezevent'), instr:"" },
+  { name:'DICE', app:'DICE', ios:AS('DICE tickets'), android:PS('DICE tickets'), instr:"Créez votre compte DICE avec l'adresse e-mail et le numéro de téléphone de cette commande : vos billets apparaissent dans « Tickets »." },
+  { name:'See Tickets', app:'See Tickets', ios:AS('See Tickets'), android:PS('See Tickets'), instr:"" },
+  { name:'UEFA Mobile Tickets', app:'UEFA Mobile Tickets', ios:AS('UEFA Mobile Tickets'), android:PS('UEFA Mobile Tickets'), instr:"Installez l'application, puis ouvrez le lien ci-dessus depuis votre téléphone pour charger vos billets. Ils seront activés dans l'application quelques jours avant le match." },
+];
+function fillAppSelects(){
+  const opts = '<option value="">— Choisir —</option>' + APPS.map((a,i)=>`<option value="${i}">${esc(a.name)}</option>`).join('') + '<option value="other">Autre…</option>';
+  $('m-preset').innerHTML = opts; $('t-preset').innerHTML = opts;
+}
+function applyAppPreset(){
+  const v=$('m-preset').value; if(v===''||v==='other'){ if(v==='other'){ $('m-app').value=''; $('m-ios').value=''; $('m-android').value=''; $('m-app').focus(); } renderPreview(); return; }
+  const a=APPS[v]; $('m-app').value=a.app; $('m-ios').value=a.ios; $('m-android').value=a.android; if(!$('m-instr').value.trim()) $('m-instr').value=a.instr; renderPreview();
+}
+function applyPlatformPreset(){
+  const v=$('t-preset').value; if(v===''||v==='other'){ if(v==='other'){ $('t-plateforme').value=''; $('t-plateforme').focus(); } renderPreview(); return; }
+  $('t-plateforme').value=APPS[v].app; renderPreview();
+}
 
 /* ---------- Fichiers ---------- */
 function setupDrop(dropId, inputId, kind){
@@ -274,8 +306,9 @@ function renderPreview(){
     const links=f.liens.split('\n').map(s=>s.trim()).filter(Boolean);
     subject=`Vos places pour ${f.evenement||'votre événement'} – accès mobile`;
     intro=`Vos places pour <b>${esc(f.evenement)||'…'}</b> vous attendent : voici comment les récupérer.`;
-    body=`${f.app?`<p><b>1.</b> Installez l'application <b>${esc(f.app)}</b>${(f.appIos||f.appAndroid)?' : '+[f.appIos?link(f.appIos)+' (iPhone)':'',f.appAndroid?link(f.appAndroid)+' (Android)':''].filter(Boolean).join(' · '):''}.</p>`:''}
-      ${links.length?`<p><b>${f.app?'2':'1'}.</b> Ouvrez ${links.length>1?'les liens':'le lien'} ci-dessous <b>depuis votre téléphone</b> :</p><div class="box">${links.map(link).join('<br>')}</div>`:''}
+    const pill=(label)=>`<span style="display:inline-block;background:#16181D;color:#fff;font-size:12px;font-weight:700;padding:7px 14px;border-radius:8px;margin:4px 8px 4px 0">${label}</span>`;
+    body=`${f.app?`<p><b>1.</b> Installez l'application <b>${esc(f.app)}</b>.</p>${(f.appIos||f.appAndroid)?`<div style="margin:0 0 14px">${f.appIos?pill('App Store (iPhone)'):''}${f.appAndroid?pill('Google Play (Android)'):''}</div>`:''}`:''}
+      ${links.length?`<p><b>${f.app?'2':'1'}.</b> Ouvrez ${links.length>1?'les liens':'le lien'} ci-dessous <b>depuis votre téléphone</b> :</p>${links.map((u,i)=>`<div class="box" style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#4A4C53">${links.length>1?'LIEN '+(i+1):'LIEN'}</div><div style="font-size:12px;color:#4A4C53;word-break:break-all">${esc(u.trim())}</div></div><span style="flex:none;background:#16181D;color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:8px">Ouvrir</span></div>`).join('')}`:''}
       ${f.instructions?`<p>${esc(f.instructions).replace(/\n/g,'<br>')}</p>`:''}
       <p style="color:#4A4C53;font-size:13px">Nous vous recommandons d'effectuer cette étape dès réception de ce mail, afin de pouvoir résoudre sereinement toute difficulté avant le jour J.</p>`;
   }
@@ -315,7 +348,7 @@ async function send(){
 }
 function resetForm(confirmIt=true){
   if(confirmIt && !confirm('Vider tout le formulaire ?')) return;
-  document.querySelectorAll('input:not([type=file]),textarea').forEach(e=>e.value='');
+  document.querySelectorAll('input:not([type=file]),textarea').forEach(e=>e.value=''); $('m-preset').value=''; $('t-preset').value='';
   files.img=[]; files.pdf=[]; renderFiles('img'); renderFiles('pdf'); setMode('transfert');
 }
 
@@ -332,7 +365,7 @@ function renderHist(){
     : '<p style="color:#888;font-size:14px">Aucun envoi pour l\'instant.</p>';
 }
 
-setupDrop('drop-img','in-img','img'); setupDrop('drop-pdf','in-pdf','pdf');
+fillAppSelects(); setupDrop('drop-img','in-img','img'); setupDrop('drop-pdf','in-pdf','pdf');
 renderPreview();
 </script>
 </body>
