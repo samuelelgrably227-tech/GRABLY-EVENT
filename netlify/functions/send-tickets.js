@@ -21,7 +21,7 @@ exports.handler = async (event) => {
 
   const esc = (t) => String(t || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const nl = (t) => esc(t).replace(/\n/g, '<br>');
-  const link = (u) => { const s = String(u || '').trim(); const h = /^https?:\/\//i.test(s) ? s : 'https://' + s; return `<a href="${esc(h)}" style="color:#E3242B;font-weight:600;word-break:break-all">${esc(s)}</a>`; };
+  const link = (u) => { const s = String(u || '').trim(); const h = /^https?:\/\//i.test(s) ? s : 'https://' + s; return `<a href="${esc(h)}" style="color:#1a73e8;font-weight:600;text-decoration:underline;word-break:break-all">${esc(s)}</a>`; };
   const row = (k, v) => v ? `<tr><td style="padding:6px 0;color:#4A4C53;font-size:13px;width:140px;vertical-align:top">${k}</td><td style="padding:6px 0;font-size:14px;font-weight:600;color:#16181D">${v}</td></tr>` : '';
 
   const first = esc(b.prenom || b.client || '');
@@ -49,13 +49,13 @@ exports.handler = async (event) => {
   } else {
     const links = String(b.liens || '').split('\n').map(s => s.trim()).filter(Boolean);
     subject = `Vos places pour ${b.evenement || 'votre événement'} – accès mobile`;
-    intro = `Vos places pour <b>${evName}</b> sont disponibles sur mobile.`;
+    intro = `Vos places pour <b>${evName}</b> vous attendent : voici comment les récupérer.`;
     body = `
       ${b.app ? `<p style="font-size:15px;line-height:1.6;margin:0 0 10px"><b>1.</b> Installez l'application <b>${esc(b.app)}</b>${b.appIos || b.appAndroid ? ' : ' + [b.appIos ? link(b.appIos) + ' (iPhone)' : '', b.appAndroid ? link(b.appAndroid) + ' (Android)' : ''].filter(Boolean).join(' · ') : ''}.</p>` : ''}
       ${links.length ? `<p style="font-size:15px;line-height:1.6;margin:0 0 10px"><b>${b.app ? '2' : '1'}.</b> Ouvrez ${links.length > 1 ? 'les liens' : 'le lien'} ci-dessous <b>depuis votre téléphone</b> :</p>
       <div style="margin:0 0 14px;padding:12px 16px;background:#F4F3EF;border-radius:10px;font-size:14px;line-height:1.8">${links.map(link).join('<br>')}</div>` : ''}
       ${b.instructions ? `<p style="font-size:15px;line-height:1.6;margin:0 0 14px">${nl(b.instructions)}</p>` : ''}
-      <p style="font-size:14px;line-height:1.6;margin:0 0 14px;color:#4A4C53">Faites cette étape avant le jour J, avec une bonne connexion : les billets s'affichent ensuite dans l'application, même hors ligne.</p>`;
+      <p style="font-size:14px;line-height:1.6;margin:0 0 14px;color:#4A4C53">Pensez à le faire avant le jour J, et n'hésitez pas à me poser vos questions si besoin.</p>`;
   }
 
   const html = `
