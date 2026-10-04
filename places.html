@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grably Event — Envoi des places</title>
+<style>
+  :root { --black:#111111; --dark:#222222; --gray:#888888; --lgray:#e8e8e8; --red:#D32F2F; --bg:#f9f9f9; --white:#fff; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:var(--bg); color:var(--dark); }
+  nav { background:var(--black); display:flex; align-items:center; justify-content:space-between; padding:14px 32px; position:sticky; top:0; z-index:100; }
+  .nav-logo { display:flex; align-items:center; gap:12px; }
+  .nav-logo span { color:white; font-weight:700; font-size:16px; letter-spacing:.5px; }
+  .nav-tabs { display:flex; gap:4px; }
+  .nav-tab { color:#aaa; background:none; border:none; cursor:pointer; padding:8px 18px; border-radius:6px; font-size:14px; font-weight:500; text-decoration:none; }
+  .nav-tab:hover { color:white; background:rgba(255,255,255,.08); }
+  .nav-tab.active { color:white; background:rgba(255,255,255,.15); }
+  main { max-width:860px; margin:0 auto; padding:36px 24px; }
+  .view { display:none; } .view.active { display:block; }
+  h1 { font-size:22px; font-weight:700; color:var(--black); margin-bottom:4px; }
+  .subtitle { color:var(--gray); font-size:13px; margin-bottom:28px; }
+  .card { background:white; border-radius:12px; padding:24px; border:1px solid var(--lgray); margin-bottom:16px; }
+  .card-title { font-size:10px; font-weight:700; letter-spacing:1px; color:var(--gray); text-transform:uppercase; margin-bottom:18px; }
+  .form-row { display:grid; gap:14px; margin-bottom:14px; }
+  .form-row.two { grid-template-columns:1fr 1fr; }
+  .form-row.three { grid-template-columns:1fr 1fr 1fr; }
+  @media (max-width:600px){ .form-row.two,.form-row.three{ grid-template-columns:1fr; } nav{ padding:12px 16px; } main{ padding:24px 14px; } }
+  .form-group { display:flex; flex-direction:column; gap:5px; }
+  label { font-size:10px; font-weight:700; color:var(--gray); text-transform:uppercase; letter-spacing:.5px; }
+  input, select, textarea { border:1.5px solid var(--lgray); border-radius:8px; padding:9px 12px; font-size:14px; color:var(--dark); background:white; outline:none; font-family:inherit; width:100%; }
+  input:focus, select:focus, textarea:focus { border-color:var(--black); }
+  textarea { resize:vertical; min-height:80px; line-height:1.6; }
+  .hint { font-size:11px; color:var(--gray); margin-top:4px; line-height:1.5; }
+
+  /* Modes */
+  .modes { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:6px; }
+  @media (max-width:600px){ .modes{ grid-template-columns:1fr; } }
+  .mode { border:1.5px solid var(--lgray); border-radius:10px; padding:14px; cursor:pointer; background:white; text-align:left; font-family:inherit; }
+  .mode b { display:block; font-size:14px; color:var(--black); margin-bottom:3px; }
+  .mode small { font-size:12px; color:var(--gray); line-height:1.4; }
+  .mode.active { border-color:var(--black); background:#f3f3f3; }
+  .mode-panel { display:none; } .mode-panel.active { display:block; }
+
+  /* Fichiers */
+  .drop { border:1.5px dashed var(--lgray); border-radius:10px; padding:18px; text-align:center; color:var(--gray); font-size:13px; cursor:pointer; }
+  .drop:hover, .drop.over { border-color:var(--black); color:var(--black); }
+  .drop input { display:none; }
+  .files { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+  .file { display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg); border:1px solid var(--lgray); border-radius:8px; padding:8px 12px; font-size:13px; }
+  .file span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .file small { color:var(--gray); flex:none; }
+  .file button { background:none; border:0; color:var(--gray); cursor:pointer; font-size:16px; }
+  .file button:hover { color:var(--red); }
+
+  .btn-primary { background:var(--black); color:white; border:none; padding:14px 32px; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; width:100%; }
+  .btn-primary:hover { opacity:.85; }
+  .btn-primary[disabled] { opacity:.6; cursor:wait; }
+  .btn-secondary { background:none; color:var(--dark); border:1.5px solid var(--lgray); padding:12px 24px; border-radius:10px; font-size:14px; cursor:pointer; width:100%; margin-top:10px; }
+  .btn-secondary:hover { border-color:var(--black); }
+
+  /* Aperçu */
+  .preview-wrap { background:#ECEAE4; border-radius:12px; padding:20px 12px; }
+  .preview { max-width:560px; margin:0 auto; background:white; border-radius:12px; padding:28px; font-size:14px; line-height:1.6; color:#16181D; }
+  .preview .subj { font-size:12px; color:var(--gray); margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--lgray); }
+  .preview table { border-collapse:collapse; width:100%; margin:6px 0 14px; }
+  .preview td { padding:5px 0; font-size:13px; vertical-align:top; }
+  .preview td:first-child { color:#4A4C53; width:130px; }
+  .preview td:last-child { font-weight:600; }
+  .preview a { color:#E3242B; font-weight:600; word-break:break-all; }
+  .preview .box { background:#F4F3EF; border-radius:10px; padding:10px 14px; margin:0 0 12px; }
+  .preview .sig { border-top:1px solid #e4e2dc; padding-top:14px; margin-top:18px; font-size:12px; color:#4A4C53; line-height:1.7; }
+
+  /* Historique */
+  .hist { display:flex; flex-direction:column; gap:10px; margin-top:20px; }
+  .hist-card { background:white; border:1px solid var(--lgray); border-radius:12px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .hist-card b { font-size:14px; color:var(--black); display:block; }
+  .hist-card small { color:var(--gray); font-size:12px; }
+  .tag { font-size:11px; font-weight:700; background:var(--bg); padding:4px 9px; border-radius:6px; color:var(--gray); flex:none; }
+
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--black); color:white; padding:12px 22px; border-radius:10px; font-size:14px; opacity:0; transition:all .25s; z-index:200; max-width:90%; text-align:center; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo"><img src="data:image/png;base64,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" alt="" style="height:26px;width:auto;"><span>GRABLY EVENT</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('new',this)">Envoyer des places</button>
+    <button class="nav-tab" onclick="showView('hist',this)">Historique</button>
+    <a class="nav-tab" href="/factures.html">Factures</a>
+  </div>
+</nav>
+
+<main>
+<div class="view active" id="view-new">
+  <h1>Envoyer des places</h1>
+  <p class="subtitle">Remplis, choisis le mode d'envoi, vérifie l'aperçu, envoie. Le client reçoit un mail depuis contact@grablyevent.com et tu es en copie.</p>
+
+  <div class="card">
+    <div class="card-title">Client</div>
+    <div class="form-row three">
+      <div class="form-group"><label>Prénom</label><input id="c-prenom" placeholder="Jean"></div>
+      <div class="form-group"><label>Nom</label><input id="c-nom" placeholder="Dupont"></div>
+      <div class="form-group"><label>E-mail</label><input id="c-email" type="email" placeholder="jean@exemple.com"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Événement</div>
+    <div class="form-row two">
+      <div class="form-group"><label>Événement</label><input id="e-nom" placeholder="PSG – OM"></div>
+      <div class="form-group"><label>Date</label><input id="e-date" placeholder="Dim. 12 oct. 2026, 20h45"></div>
+    </div>
+    <div class="form-row three">
+      <div class="form-group"><label>Lieu</label><input id="e-lieu" placeholder="Parc des Princes, Paris"></div>
+      <div class="form-group"><label>Nombre de places</label><input id="e-nb" type="number" min="1" placeholder="2"></div>
+      <div class="form-group"><label>Placement (optionnel)</label><input id="e-placement" placeholder="Tribune Borelli, bloc K"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Mode d'envoi</div>
+    <div class="modes">
+      <button class="mode active" data-mode="transfert" onclick="setMode('transfert')"><b>Transfert</b><small>Les billets ont été transférés sur le compte du client (app du club, Ticketmaster…). Tu joins les captures.</small></button>
+      <button class="mode" data-mode="pdf" onclick="setMode('pdf')"><b>Billets PDF</b><small>Tu joins les billets en PDF, le client les présente à l'entrée.</small></button>
+      <button class="mode" data-mode="mobile" onclick="setMode('mobile')"><b>Lien / application</b><small>Le client doit ouvrir un lien ou installer une app pour récupérer ses billets.</small></button>
+    </div>
+
+    <div class="mode-panel active" id="panel-transfert" style="margin-top:16px">
+      <div class="form-row two">
+        <div class="form-group"><label>Plateforme</label><input id="t-plateforme" placeholder="Application PSG, Ticketmaster, Roland-Garros…"></div>
+        <div class="form-group"><label>Compte du client (e-mail ou identifiant)</label><input id="t-compte" placeholder="jean@exemple.com"></div>
+      </div>
+      <div class="form-group"><label>Preuves du transfert (captures d'écran)</label>
+        <div class="drop" id="drop-img"><input type="file" id="in-img" accept="image/*" multiple>Cliquer ou glisser des images ici</div>
+        <div class="files" id="files-img"></div>
+        <div class="hint">Les images sont réduites automatiquement pour passer par e-mail.</div>
+      </div>
+    </div>
+
+    <div class="mode-panel" id="panel-pdf" style="margin-top:16px">
+      <div class="form-group"><label>Billets (PDF)</label>
+        <div class="drop" id="drop-pdf"><input type="file" id="in-pdf" accept="application/pdf" multiple>Cliquer ou glisser des PDF ici</div>
+        <div class="files" id="files-pdf"></div>
+        <div class="hint">4 Mo maximum au total. Au-delà, envoie en deux mails.</div>
+      </div>
+    </div>
+
+    <div class="mode-panel" id="panel-mobile" style="margin-top:16px">
+      <div class="form-group" style="margin-bottom:14px"><label>Lien(s) à ouvrir sur le téléphone</label><textarea id="m-liens" placeholder="Un lien par ligne"></textarea></div>
+      <div class="form-row three">
+        <div class="form-group"><label>Application à installer (optionnel)</label><input id="m-app" placeholder="Ticketmaster, Billetterie PSG…"></div>
+        <div class="form-group"><label>Lien App Store (optionnel)</label><input id="m-ios" placeholder="https://apps.apple.com/…"></div>
+        <div class="form-group"><label>Lien Google Play (optionnel)</label><input id="m-android" placeholder="https://play.google.com/…"></div>
+      </div>
+      <div class="form-group"><label>Instructions (optionnel)</label><textarea id="m-instr" placeholder="Ex. : Créez un compte avec l'adresse e-mail de cette commande, puis ouvrez « Mes billets »."></textarea></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Message personnel (optionnel)</div>
+    <textarea id="msg" placeholder="Une phrase en plus pour le client, si besoin."></textarea>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Aperçu du mail</div>
+    <div class="preview-wrap"><div class="preview" id="preview"></div></div>
+  </div>
+
+  <button class="btn-primary" id="btn-send" onclick="send()">Envoyer les places</button>
+  <button class="btn-secondary" onclick="resetForm()">Vider le formulaire</button>
+</div>
+
+<div class="view" id="view-hist">
+  <h1>Historique des envois</h1>
+  <p class="subtitle">Enregistré sur cet appareil uniquement. Les mails complets sont dans ta boîte contact@ (tu es en copie de chaque envoi).</p>
+  <div class="hist" id="hist"></div>
+</div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+let mode = 'transfert';
+const files = { img: [], pdf: [] };   // {name, type, content(base64), size}
+
+function showView(v, btn){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(e=>e.classList.remove('active'));
+  $('view-'+v).classList.add('active'); if(btn) btn.classList.add('active');
+  if(v==='hist') renderHist();
+}
+function setMode(m){
+  mode = m;
+  document.querySelectorAll('.mode').forEach(b=>b.classList.toggle('active', b.dataset.mode===m));
+  document.querySelectorAll('.mode-panel').forEach(p=>p.classList.toggle('active', p.id==='panel-'+m));
+  renderPreview();
+}
+function toast(msg, d=3000){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'), d); }
+function esc(t){ return String(t||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmtSize(n){ return n>1e6 ? (n/1e6).toFixed(1)+' Mo' : Math.round(n/1e3)+' Ko'; }
+
+/* ---------- Fichiers ---------- */
+function setupDrop(dropId, inputId, kind){
+  const drop=$(dropId), input=$(inputId);
+  drop.addEventListener('click', ()=>input.click());
+  drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', ()=>drop.classList.remove('over'));
+  drop.addEventListener('drop', e=>{ e.preventDefault(); drop.classList.remove('over'); addFiles(kind, e.dataTransfer.files); });
+  input.addEventListener('change', ()=>{ addFiles(kind, input.files); input.value=''; });
+}
+async function addFiles(kind, list){
+  for (const f of list){
+    try{
+      if(kind==='img'){ files.img.push(await compressImage(f)); }
+      else { if(f.type!=='application/pdf'){ toast('Seuls les PDF sont acceptés ici'); continue; } files.pdf.push({name:f.name, type:'application/pdf', content:await toBase64(f), size:f.size}); }
+    }catch(e){ console.error(e); toast('Fichier impossible à lire : '+f.name); }
+  }
+  renderFiles(kind); renderPreview();
+}
+function removeFile(kind, i){ files[kind].splice(i,1); renderFiles(kind); renderPreview(); }
+function renderFiles(kind){
+  $('files-'+kind).innerHTML = files[kind].map((f,i)=>`<div class="file"><span>${esc(f.name)}</span><small>${fmtSize(f.size)}</small><button type="button" onclick="removeFile('${kind}',${i})" title="Retirer">×</button></div>`).join('');
+}
+function toBase64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); }); }
+function compressImage(file){
+  return new Promise((res,rej)=>{
+    const img=new Image(); const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const max=1400; let w=img.width, h=img.height;
+      if(w>max||h>max){ const r=Math.min(max/w,max/h); w=Math.round(w*r); h=Math.round(h*r); }
+      const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+      const data=c.toDataURL('image/jpeg',0.82); URL.revokeObjectURL(url);
+      const b64=data.split(',')[1];
+      res({ name:file.name.replace(/\.[^.]+$/,'')+'.jpg', type:'image/jpeg', content:b64, size:Math.round(b64.length*0.75) });
+    };
+    img.onerror=rej; img.src=url;
+  });
+}
+function totalSize(){ const list = mode==='transfert'?files.img : mode==='pdf'?files.pdf : []; return list.reduce((s,f)=>s+f.content.length,0); }
+
+/* ---------- Données ---------- */
+function readForm(){
+  const g=id=>$(id).value.trim();
+  return { prenom:g('c-prenom'), nom:g('c-nom'), to:g('c-email'),
+    evenement:g('e-nom'), date:g('e-date'), lieu:g('e-lieu'), nb:g('e-nb'), placement:g('e-placement'),
+    plateforme:g('t-plateforme'), compte:g('t-compte'),
+    liens:g('m-liens'), app:g('m-app'), appIos:g('m-ios'), appAndroid:g('m-android'), instructions:g('m-instr'),
+    message:g('msg'), mode };
+}
+
+/* ---------- Aperçu (même logique que le mail) ---------- */
+function renderPreview(){
+  const f=readForm();
+  const link=u=>{ const s=u.trim(); return `<a>${esc(s)}</a>`; };
+  const row=(k,v)=> v?`<tr><td>${k}</td><td>${v}</td></tr>`:'';
+  const nb=f.nb?`${esc(f.nb)} place${Number(f.nb)>1?'s':''}`:'';
+  const info=`<table>${row('Événement',esc(f.evenement))}${row('Date',esc(f.date))}${row('Lieu',esc(f.lieu))}${row('Places',[nb,esc(f.placement)].filter(Boolean).join(' · '))}</table>`;
+  let subject='', intro='', body='';
+  const att = mode==='transfert'?files.img : mode==='pdf'?files.pdf : [];
+  if(mode==='transfert'){
+    subject=`Vos places pour ${f.evenement||'votre événement'} – transfert effectué`;
+    intro=`Bonne nouvelle : vos places pour <b>${esc(f.evenement)||'…'}</b> viennent de vous être transférées.`;
+    body=`<table>${row('Plateforme',esc(f.plateforme))}${row('Compte destinataire',esc(f.compte))}</table>
+      <p>Connectez-vous à <b>${esc(f.plateforme)||'la plateforme'}</b> avec ce compte : les billets apparaissent dans votre espace, généralement sous quelques minutes. Pensez à accepter le transfert si une notification vous le demande.</p>
+      ${att.length?`<p style="color:#4A4C53;font-size:13px">Vous trouverez en pièce jointe ${att.length>1?'les captures':'la capture'} confirmant le transfert.</p>`:''}`;
+  } else if(mode==='pdf'){
+    subject=`Vos places pour ${f.evenement||'votre événement'}`;
+    intro=`Voici vos places pour <b>${esc(f.evenement)||'…'}</b>, en pièce jointe de ce mail.`;
+    body=`<p>Téléchargez ${att.length>1?'les fichiers':'le fichier'} sur votre téléphone avant le jour J : ${att.length>1?'ils seront':'il sera'} à présenter à l'entrée (sur écran ou imprimé). Chaque billet ne peut être scanné qu'une seule fois.</p>`;
+  } else {
+    const links=f.liens.split('\n').map(s=>s.trim()).filter(Boolean);
+    subject=`Vos places pour ${f.evenement||'votre événement'} – accès mobile`;
+    intro=`Vos places pour <b>${esc(f.evenement)||'…'}</b> sont disponibles sur mobile.`;
+    body=`${f.app?`<p><b>1.</b> Installez l'application <b>${esc(f.app)}</b>${(f.appIos||f.appAndroid)?' : '+[f.appIos?link(f.appIos)+' (iPhone)':'',f.appAndroid?link(f.appAndroid)+' (Android)':''].filter(Boolean).join(' · '):''}.</p>`:''}
+      ${links.length?`<p><b>${f.app?'2':'1'}.</b> Ouvrez ${links.length>1?'les liens':'le lien'} ci-dessous <b>depuis votre téléphone</b> :</p><div class="box">${links.map(link).join('<br>')}</div>`:''}
+      ${f.instructions?`<p>${esc(f.instructions).replace(/\n/g,'<br>')}</p>`:''}
+      <p style="color:#4A4C53;font-size:13px">Faites cette étape avant le jour J, avec une bonne connexion : les billets s'affichent ensuite dans l'application, même hors ligne.</p>`;
+  }
+  $('preview').innerHTML=`<div class="subj"><b>À :</b> ${esc(f.to)||'…'} &nbsp;·&nbsp; <b>Objet :</b> ${esc(subject)}${att.length?` &nbsp;·&nbsp; <b>${att.length} pièce${att.length>1?'s':''} jointe${att.length>1?'s':''}</b> (${fmtSize(totalSize()*0.75)})`:''}</div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:16px"><span style="color:#E3242B">G</span>E&nbsp; Grably Event</div>
+    <p>Bonjour ${esc(f.prenom)||'…'},</p><p>${intro}</p>${info}${body}
+    ${f.message?`<p>${esc(f.message).replace(/\n/g,'<br>')}</p>`:''}
+    <p>Je reste joignable sur WhatsApp pour toute question. Profitez bien de l'événement !</p>
+    <div class="sig">Cordialement,<br><b style="color:#16181D">GRABLY EVENT</b><br>WhatsApp : +33 7 69 06 33 85<br>contact@grablyevent.com · grablyevent.com</div>`;
+  $('btn-send').textContent = f.to ? 'Envoyer les places à '+f.to : 'Envoyer les places';
+}
+document.addEventListener('input', renderPreview);
+
+/* ---------- Envoi ---------- */
+function getPin(){ let pin=localStorage.getItem('ge_pin'); if(!pin){ pin=prompt('Code d\'envoi Grably Event :'); if(pin) localStorage.setItem('ge_pin',pin.trim()); } return pin?pin.trim():null; }
+async function send(){
+  const f=readForm();
+  if(!f.prenom||!f.to){ toast('Indique au moins le prénom et l\'e-mail du client'); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.to)){ toast('E-mail du client invalide'); return; }
+  if(!f.evenement){ toast('Indique l\'événement'); return; }
+  if(mode==='pdf'&&!files.pdf.length){ toast('Ajoute au moins un billet PDF'); return; }
+  if(mode==='mobile'&&!f.liens&&!f.app){ toast('Indique un lien ou une application'); return; }
+  if(totalSize()>5_200_000){ toast('Pièces jointes trop lourdes (max ~4 Mo). Retire des fichiers ou envoie en deux fois.',5000); return; }
+  const pin=getPin(); if(!pin) return;
+  const btn=$('btn-send'); btn.disabled=true; btn.textContent='Envoi en cours…';
+  try{
+    const att = mode==='transfert'?files.img : mode==='pdf'?files.pdf : [];
+    const r=await fetch('/.netlify/functions/send-tickets',{ method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ ...f, pin, files: att.map(a=>({filename:a.name, content:a.content})) }) });
+    if(r.status===401){ localStorage.removeItem('ge_pin'); throw new Error('code d\'envoi incorrect, réessaie'); }
+    if(!r.ok){ throw new Error((await r.text()).slice(0,160)||('erreur '+r.status)); }
+    saveHist(f, att.length);
+    toast('✅ Places envoyées à '+f.to, 4000);
+    resetForm(false);
+  }catch(e){ console.error(e); toast('❌ Envoi impossible : '+e.message, 6000); }
+  btn.disabled=false; renderPreview();
+}
+function resetForm(confirmIt=true){
+  if(confirmIt && !confirm('Vider tout le formulaire ?')) return;
+  document.querySelectorAll('input:not([type=file]),textarea').forEach(e=>e.value='');
+  files.img=[]; files.pdf=[]; renderFiles('img'); renderFiles('pdf'); setMode('transfert');
+}
+
+/* ---------- Historique ---------- */
+function saveHist(f, n){
+  const h=JSON.parse(localStorage.getItem('ge_tickets_hist')||'[]');
+  h.unshift({ when:new Date().toISOString(), client:`${f.prenom} ${f.nom}`.trim(), to:f.to, evenement:f.evenement, date:f.date, mode, n });
+  localStorage.setItem('ge_tickets_hist', JSON.stringify(h.slice(0,200)));
+}
+function renderHist(){
+  const h=JSON.parse(localStorage.getItem('ge_tickets_hist')||'[]');
+  const lab={transfert:'Transfert',pdf:'PDF',mobile:'Lien mobile'};
+  $('hist').innerHTML = h.length ? h.map(x=>`<div class="hist-card"><div><b>${esc(x.client)} <span style="font-weight:400;color:#888">· ${esc(x.to)}</span></b><small>${esc(x.evenement)}${x.date?' · '+esc(x.date):''} — envoyé le ${new Date(x.when).toLocaleDateString('fr-FR')} à ${new Date(x.when).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</small></div><span class="tag">${lab[x.mode]}${x.n?` · ${x.n} PJ`:''}</span></div>`).join('')
+    : '<p style="color:#888;font-size:14px">Aucun envoi pour l\'instant.</p>';
+}
+
+setupDrop('drop-img','in-img','img'); setupDrop('drop-pdf','in-pdf','pdf');
+renderPreview();
+</script>
+</body>
+</html>
