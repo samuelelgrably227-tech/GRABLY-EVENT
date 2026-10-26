@@ -874,7 +874,7 @@ async function generateInvoice(mode='auto') {
   if (mode === 'auto' && email) {
     const btn = document.getElementById('btn-main'); btn.disabled = true; btn.textContent = 'Envoi en cours…';
     try {
-      const sent = await sendInvoiceByEmail({ to: email, client, num, total: fmt(total), date: dateStr, due: dueStr, filename, pdfBase64: doc.output('datauristring').split(',')[1], lang: document.getElementById('f-lang').value, compte: document.getElementById('f-compte').value });
+      const sent = await sendInvoiceByEmail({ to: email, client, num, total: fmt(total), date: dateStr, due: dueStr, filename, pdfBase64: doc.output('datauristring').split(',')[1], lang: document.getElementById('f-lang').value, compte: document.getElementById('f-compte').value, iban: document.getElementById('f-iban').value.trim(), bic: document.getElementById('f-bic').value.trim(), benef: document.getElementById('f-benef').value.trim(), statut: document.getElementById('f-statut').value });
       if (!sent) { btn.disabled = false; updateMainButton(); return; }
       toast('✅ Facture envoyée à ' + email, 4000);
     } catch (e) {
