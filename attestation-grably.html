@@ -221,30 +221,44 @@ async function generate(){
   const W=210,ML=20,MR=20;
   const BLACK=[17,17,17],GRAY=[120,120,120],LGRAY=[220,220,220],RED=[211,47,47];
   let y=22;
-  doc.setFillColor(...BLACK); doc.rect(0,0,W,18,'F');
-  try{doc.addImage(LOGO_B64,'PNG',ML,2,12,12);}catch(e){}
-  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(255,255,255);
-  doc.text('GRABLY EVENT',ML+14,10.5);
-  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(180,180,180);
-  doc.text('Attestation de cession de billets',ML+14,15);
-  y=28;
-  doc.setFont('helvetica','bold');doc.setFontSize(18);doc.setTextColor(...BLACK);
-  doc.text('ATTESTATION DE CESSION',W/2,y,{align:'center'});y+=5;
+    // Mise en page pensée pour la lecture automatique (Qonto, compta) : le VENDEUR est
+  // l'émetteur du document (en-tête, pied de page, métadonnées) ; Grably Event n'apparaît
+  // qu'en tant que client/acheteur, pour que le bénéficiaire du virement soit bien le vendeur.
+  const numDoc='AC-'+(vDate||new Date().toISOString().slice(0,10)).replace(/-/g,'')+'-'+String(Date.now()).slice(-4);
+  doc.setProperties({title:`Attestation de cession ${numDoc} — ${vendeur}`,subject:`Cession de billets — ${bEvent||''}`,author:vTitul||vendeur,creator:vTitul||vendeur});
+  doc.setFillColor(...BLACK); doc.rect(0,0,W,22,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(180,180,180);
+  doc.text('ÉMETTEUR / VENDEUR',ML,8);
+  doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(255,255,255);
+  doc.text((vTitul||vendeur).toUpperCase(),ML,15.5);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(200,200,200);
+  doc.text([vAdresse,vEmail,vTel].filter(Boolean).join('  ·  '),ML,20);
+  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(255,255,255);
+  doc.text('ATTESTATION DE CESSION',W-MR,9,{align:'right'});
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(200,200,200);
+  doc.text(`N° ${numDoc}`,W-MR,14,{align:'right'});
+  doc.text(`Date : ${dateStr||'—'}`,W-MR,19,{align:'right'});
+  y=32;
+  doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(...BLACK);
+  doc.text('ATTESTATION DE CESSION DE BILLETS',ML,y);y+=5;
   doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...GRAY);
-  doc.text(`Date de la transaction : ${dateStr}`,W/2,y,{align:'center'});y+=10;
+  doc.text(`Document émis par ${vendeur} · Date de la transaction : ${dateStr||'—'}`,ML,y);y+=8;
   doc.setDrawColor(...LGRAY);doc.setLineWidth(0.4);doc.line(ML,y,W-MR,y);y+=8;
   const c1=ML,c2=W/2+4;
   doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...GRAY);
-  doc.text('VENDEUR',c1,y);doc.text('ACHETEUR',c2,y);y+=5;
+  doc.text('VENDEUR (BÉNÉFICIAIRE DU PAIEMENT)',c1,y);doc.text('CLIENT / ACHETEUR',c2,y);y+=5;
   doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...BLACK);
-  doc.text(vendeur,c1,y);doc.text(aNom,c2,y);y+=5;
+  doc.text(vTitul||vendeur,c1,y);
   doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...GRAY);
-  if(vAdresse){doc.text(vAdresse,c1,y);}
   doc.text(aSociete,c2,y);y+=5;
+  if(vTitul&&vTitul!==vendeur){doc.text(vendeur,c1,y);}
+  doc.text(aNom,c2,y);y+=5;
+  if(vAdresse){doc.text(vAdresse,c1,y);}
+  doc.text('45 Boulevard Suchet, 75016 Paris',c2,y);y+=5;
   if(vEmail)doc.text(vEmail,c1,y);
   if(vTel)doc.text(vTel,c1,y+(vEmail?4:0));
   y+=10;
-  doc.setDrawColor(...LGRAY);doc.line(ML,y,W-MR,y);y+=8;
+doc.setDrawColor(...LGRAY);doc.line(ML,y,W-MR,y);y+=8;
   doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...GRAY);
   doc.text('ÉVÉNEMENT',ML,y);y+=4;
   doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...BLACK);
@@ -261,14 +275,16 @@ async function generate(){
   });
   y+=4;
   doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...BLACK);
-  doc.text('MONTANT TOTAL',ML,y);
+  doc.text('MONTANT TOTAL À PAYER AU VENDEUR',ML,y);
   doc.setFontSize(14);doc.text(fmt(total),W-MR,y,{align:'right'});y+=10;
   doc.setDrawColor(...LGRAY);doc.line(ML,y,W-MR,y);y+=8;
   doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...GRAY);
-  doc.text('COORDONNÉES BANCAIRES DU VENDEUR',ML,y);y+=5;
-  doc.text('TITULAIRE',ML,y);doc.text('IBAN',ML+60,y);if(vBic)doc.text('BIC',ML+130,y);y+=4;
+  doc.text('PAIEMENT PAR VIREMENT — BÉNÉFICIAIRE',ML,y);y+=5;
+  doc.text('TITULAIRE DU COMPTE',ML,y);doc.text('IBAN',ML+60,y);if(vBic)doc.text('BIC',ML+130,y);y+=4;
   doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...BLACK);
-  doc.text(vTitul||vendeur,ML,y);doc.text(vIban,ML+60,y);if(vBic)doc.text(vBic,ML+130,y);y+=10;
+  doc.text(vTitul||vendeur,ML,y);doc.text(vIban,ML+60,y);if(vBic)doc.text(vBic,ML+130,y);y+=5;
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...GRAY);
+  doc.text(`Référence du virement : ${numDoc} — ${vendeur}`,ML,y);y+=8;
   doc.setDrawColor(...LGRAY);doc.line(ML,y,W-MR,y);y+=8;
   doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...GRAY);
   const mention=`Je soussigné(e) ${vendeur} certifie céder les billets décrits ci-dessus à ${aNom} (${aSociete}) pour un montant total de ${fmt(total)}, et atteste sur l'honneur que ces billets sont authentiques et en ma possession.`;
@@ -281,7 +297,7 @@ async function generate(){
   doc.text(`${vendeur}${dateStr?' — '+dateStr:''}`,ML,y);
   doc.setDrawColor(...LGRAY);doc.setLineWidth(0.3);doc.line(ML,280,W-MR,280);
   doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...GRAY);
-  doc.text('Grably Event — 45 Boulevard Suchet, 75016 Paris — grablyticket@grablito.com — SIRET : 104 830 203 00014',W/2,285,{align:'center'});
+  doc.text(`Document émis par ${vTitul||vendeur} — Attestation ${numDoc} — Client : Grably Event`,W/2,285,{align:'center'});
   return {doc, filename:`Attestation_Cession_${vendeur.replace(/\s+/g,'_')}.pdf`};
 }
 
