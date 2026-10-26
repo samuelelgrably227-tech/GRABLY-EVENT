@@ -7,6 +7,7 @@
 const db = require('./_db');
 
 exports.handler = async (event) => {
+  db.init(event);
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Méthode non autorisée' };
   const pinExpected = process.env.INVOICE_PIN;
   if (!pinExpected) return { statusCode: 500, body: 'Configuration manquante (INVOICE_PIN)' };
