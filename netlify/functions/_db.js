@@ -2,7 +2,12 @@
 // Trois "tables" : invoices, tickets, attestations. Chaque enregistrement a un id
 // et une date ; les gros fichiers (PDF des factures, PDF des attestations) sont
 // rangés à part dans le magasin "files" pour garder les listes légères.
-const { getStore } = require('@netlify/blobs');
+const { getStore, connectLambda } = require('@netlify/blobs');
+
+// À appeler en tête de chaque fonction (format Lambda) pour brancher Blobs.
+function init(event) {
+  try { if (event && event.blobs) connectLambda(event); } catch (e) { /* ignoré */ }
+}
 
 const records = () => getStore({ name: 'records', consistency: 'strong' });
 const files = () => getStore({ name: 'files', consistency: 'strong' });
@@ -45,4 +50,4 @@ async function getFile(key) {
   return files().get(key, { type: 'text' });
 }
 
-module.exports = { saveRecord, listRecords, getRecord, saveFile, getFile, KINDS };
+module.exports = { init, saveRecord, listRecords, getRecord, saveFile, getFile, KINDS };
