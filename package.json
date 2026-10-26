@@ -1,0 +1,8 @@
+{
+  "name": "grably-event-site",
+  "private": true,
+  "description": "Site Grably Event — pages statiques + fonctions Netlify (envoi de factures et de places, base de données des enregistrements)",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

@@ -326,6 +326,15 @@ async function send(){
     fd.append('attestation_pdf',new File([doc.output('blob')],filename,{type:'application/pdf'}));
     const r=await fetch(location.pathname,{method:'POST',body:fd});
     if(!r.ok)throw new Error('HTTP '+r.status);
+    // Copie dans la base de données du site (consultable depuis admin.html).
+    // Si ça échoue, l'attestation est quand même partie par le formulaire ci-dessus.
+    try{
+      const pdfBase64=doc.output('datauristring').split(',')[1];
+      await fetch('/.netlify/functions/save-attestation',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({vendeur:`${f.prenom} ${f.nom}`,email:f.email,tel:f.tel,adresse:f.adresse,evenement:f.event,
+          billets:billets.map(b=>({desc:b.desc,qte:b.qte,prix:b.prix})),total:f.total,
+          titulaire:f.titulaire||`${f.prenom} ${f.nom}`,iban:f.iban,bic:f.bic,date:f.date,filename,pdfBase64})});
+    }catch(e){console.warn('base',e);}
     closeReview();
     document.querySelector('main').innerHTML=`<div class="done">
       <div class="ok">✓</div>

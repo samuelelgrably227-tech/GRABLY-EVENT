@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Grably Event — Tableau de bord</title>
+<style>
+  :root { --black:#111111; --dark:#222222; --gray:#888888; --lgray:#e8e8e8; --red:#D32F2F; --green:#0a7d3b; --bg:#f9f9f9; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:var(--bg); color:var(--dark); }
+  nav { background:var(--black); display:flex; align-items:center; justify-content:space-between; padding:14px 24px; position:sticky; top:0; z-index:100; gap:12px; flex-wrap:wrap; }
+  .nav-logo { display:flex; align-items:center; gap:12px; color:white; font-weight:700; font-size:16px; letter-spacing:.5px; }
+  .nav-logo span.sub { color:#aaa; font-weight:400; font-size:12px; }
+  .nav-tabs { display:flex; gap:4px; flex-wrap:wrap; }
+  .nav-tab { color:#aaa; background:none; border:none; cursor:pointer; padding:8px 16px; border-radius:6px; font-size:14px; font-weight:500; }
+  .nav-tab:hover { color:white; background:rgba(255,255,255,.08); }
+  .nav-tab.active { color:white; background:rgba(255,255,255,.15); }
+  .nav-links a { color:#aaa; font-size:13px; text-decoration:none; margin-left:14px; }
+  .nav-links a:hover { color:white; }
+  main { max-width:960px; margin:0 auto; padding:32px 20px 60px; }
+  h1 { font-size:22px; font-weight:700; color:var(--black); margin-bottom:4px; }
+  .subtitle { color:var(--gray); font-size:13px; margin-bottom:22px; }
+  .toolbar { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:center; }
+  .toolbar input { flex:1; min-width:200px; border:1.5px solid var(--lgray); border-radius:8px; padding:9px 12px; font-size:14px; outline:none; background:white; }
+  .toolbar input:focus { border-color:var(--black); }
+  .stat { font-size:13px; color:var(--gray); }
+  .card { background:white; border:1px solid var(--lgray); border-radius:12px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:10px; }
+  .card:hover { box-shadow:0 4px 16px rgba(0,0,0,.06); }
+  .num { font-size:12px; font-weight:700; color:var(--gray); background:var(--bg); padding:5px 10px; border-radius:6px; min-width:60px; text-align:center; }
+  .info { display:flex; align-items:center; gap:14px; min-width:0; }
+  .title { font-weight:600; font-size:14px; color:var(--black); }
+  .meta { font-size:12px; color:var(--gray); margin-top:2px; }
+  .amount { font-weight:700; font-size:15px; color:var(--black); text-align:right; white-space:nowrap; }
+  .date { font-size:11px; color:var(--gray); text-align:right; }
+  .actions { display:flex; gap:8px; flex-shrink:0; }
+  .btn { background:none; border:1.5px solid var(--lgray); color:var(--gray); padding:7px 12px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:500; text-decoration:none; }
+  .btn:hover { border-color:var(--black); color:var(--black); }
+  .tag { display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; background:var(--bg); color:var(--gray); margin-left:6px; }
+  .tag.ok { background:#e8f5ee; color:var(--green); }
+  .empty { text-align:center; padding:50px 20px; color:var(--gray); font-size:14px; }
+  .view { display:none; } .view.active { display:block; }
+  .gate { max-width:380px; margin:80px auto; background:white; border:1px solid var(--lgray); border-radius:14px; padding:28px; }
+  .gate label { display:block; font-size:11px; font-weight:700; color:var(--gray); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
+  .gate input { width:100%; border:1.5px solid var(--lgray); border-radius:8px; padding:11px 14px; font-size:16px; outline:none; margin-bottom:14px; }
+  .gate input:focus { border-color:var(--black); }
+  .btn-primary { background:var(--black); color:white; border:none; padding:13px 24px; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; width:100%; }
+  .btn-primary:hover { opacity:.85; }
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(8px); background:var(--black); color:white; padding:12px 22px; border-radius:10px; font-size:13px; opacity:0; transition:all .3s; pointer-events:none; z-index:1000; white-space:nowrap; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  details { background:white; border:1px solid var(--lgray); border-radius:12px; margin-bottom:10px; }
+  details summary { list-style:none; cursor:pointer; }
+  details summary::-webkit-details-marker { display:none; }
+  details .card { border:none; margin:0; }
+  details .body { padding:0 20px 16px; font-size:13px; color:var(--dark); line-height:1.7; border-top:1px solid var(--lgray); padding-top:12px; }
+  details .body b { color:var(--black); }
+  .ev { background:white; border:1px solid var(--lgray); border-radius:12px; padding:14px 16px; margin-bottom:10px; display:grid; grid-template-columns:28px 1.6fr 1.2fr 1fr 1fr auto; gap:10px; align-items:center; }
+  .ev input { border:1.5px solid var(--lgray); border-radius:8px; padding:8px 10px; font-size:13px; width:100%; outline:none; }
+  .ev input:focus { border-color:var(--black); }
+  .ev .handle { color:var(--gray); font-size:12px; text-align:center; }
+  .ev .mini { display:flex; gap:4px; }
+  .ev .mini button { background:none; border:1.5px solid var(--lgray); color:var(--gray); width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:14px; }
+  .ev .mini button:hover { border-color:var(--black); color:var(--black); }
+  .ev.hidden-ev { opacity:.45; }
+  .hint { font-size:12px; color:var(--gray); margin:-10px 0 16px; line-height:1.6; }
+  .save-bar { display:flex; gap:10px; align-items:center; margin-top:14px; }
+  .btn-primary.inline { width:auto; padding:11px 22px; }
+  @media (max-width:760px) { .ev { grid-template-columns:1fr 1fr; } .ev .handle { display:none; } }
+  @media (max-width:600px) { .card { flex-direction:column; align-items:flex-start; } .amount,.date { text-align:left; } }
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-logo">GRABLY EVENT <span class="sub">· Tableau de bord</span></div>
+  <div class="nav-tabs" id="tabs" style="display:none">
+    <button class="nav-tab active" onclick="showView('invoices',this)">Factures</button>
+    <button class="nav-tab" onclick="showView('tickets',this)">Envois de places</button>
+    <button class="nav-tab" onclick="showView('attestations',this)">Attestations</button>
+    <button class="nav-tab" onclick="showView('events',this)">Événements</button>
+    <button class="nav-tab" onclick="showView('clients',this)">Clients</button>
+  </div>
+  <div class="nav-links"><a href="/factures.html">+ Facture</a><a href="/places.html">+ Places</a></div>
+</nav>
+
+<main>
+  <div id="gate" class="gate">
+    <label>Code d'envoi Grably Event</label>
+    <input type="password" id="pin" autocomplete="current-password" placeholder="••••••" onkeydown="if(event.key==='Enter')unlock()">
+    <button class="btn-primary" onclick="unlock()">Ouvrir le tableau de bord</button>
+  </div>
+
+  <div id="app" style="display:none">
+    <div class="view active" id="view-invoices">
+      <h1>Factures</h1>
+      <p class="subtitle">Toutes les factures générées depuis le site, avec le PDF exact qui a été envoyé.</p>
+      <div class="toolbar"><input id="q-invoices" placeholder="Rechercher un client, un numéro, un événement…" oninput="render('invoices')"><span class="stat" id="stat-invoices"></span></div>
+      <div id="list-invoices"></div>
+    </div>
+    <div class="view" id="view-tickets">
+      <h1>Envois de places</h1>
+      <p class="subtitle">Chaque envoi, avec ses pièces jointes. « Reprendre » rouvre l'envoi dans la page Places pour le corriger et le renvoyer.</p>
+      <div class="toolbar"><input id="q-tickets" placeholder="Rechercher un client, un e-mail, un événement…" oninput="render('tickets')"><span class="stat" id="stat-tickets"></span></div>
+      <div id="list-tickets"></div>
+    </div>
+    <div class="view" id="view-attestations">
+      <h1>Attestations de cession</h1>
+      <p class="subtitle">Les attestations remplies par les vendeurs, avec leur IBAN pour le virement et le PDF signé.</p>
+      <div class="toolbar"><input id="q-attestations" placeholder="Rechercher un vendeur, un événement, un IBAN…" oninput="render('attestations')"><span class="stat" id="stat-attestations"></span></div>
+      <div id="list-attestations"></div>
+    </div>
+    <div class="view" id="view-events">
+      <h1>Événements à venir</h1>
+      <p class="subtitle">Ce qui s'affiche sur grablyevent.com, section « Événements à venir ». Les 5 premiers sont mis en avant, les événements passés disparaissent seuls.</p>
+      <p class="hint">Titre (ex. « Roland-Garros 2027 — Finale messieurs »), sous-titre (ex. « Court Philippe-Chatrier · Cat. 1 à Loge »), date (pour le tri et l'expiration), texte de date affiché (ex. « 6 juin 2027 » ou « Juin 2027 »), lieu. ⇅ pour l'ordre, 👁 pour masquer sans supprimer.</p>
+      <div id="list-events"></div>
+      <div class="save-bar"><button class="btn" onclick="addEvent()">+ Ajouter un événement</button><button class="btn-primary inline" onclick="saveEvents()">Enregistrer et publier sur le site</button><span class="stat" id="stat-events"></span></div>
+    </div>
+    <div class="view" id="view-clients">
+      <h1>Clients enregistrés</h1>
+      <p class="subtitle">Fiches disponibles dans le menu « Client enregistré » de la page Factures. Elles se créent automatiquement à chaque facture ; tu peux les corriger ici.</p>
+      <div class="toolbar"><input id="q-clients" placeholder="Rechercher…" oninput="render('clients')"><span class="stat" id="stat-clients"></span></div>
+      <div id="list-clients"></div>
+    </div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = n => { const f = (Number(n)||0).toFixed(2); const [i,d] = f.split('.'); return i.replace(/\B(?=(\d{3})+(?!\d))/g,' ') + ',' + d + ' €'; };
+const when = iso => iso ? new Date(iso).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}) : '';
+const whenT = iso => iso ? new Date(iso).toLocaleString('fr-FR',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+function toast(m, d=3500){ const t=$('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), d); }
+
+const data = { invoices:[], tickets:[], attestations:[], clients:[] };
+let events = [];
+let pin = localStorage.getItem('ge_pin') || '';
+
+async function api(payload){
+  const r = await fetch('/.netlify/functions/records', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ...payload, pin }) });
+  if (r.status === 401) { localStorage.removeItem('ge_pin'); pin=''; throw new Error('code incorrect'); }
+  if (!r.ok) throw new Error((await r.text()).slice(0,160) || ('erreur ' + r.status));
+  return r.json();
+}
+
+async function unlock(){
+  const v = $('pin').value.trim(); if (!v) return;
+  pin = v;
+  try { await loadAll(); localStorage.setItem('ge_pin', pin); }
+  catch(e) { toast('❌ ' + e.message); return; }
+  $('gate').style.display='none'; $('app').style.display='block'; $('tabs').style.display='flex';
+}
+async function loadAll(){
+  const [a,b,c,d,e] = await Promise.all([
+    api({ action:'list', kind:'invoices' }), api({ action:'list', kind:'tickets' }), api({ action:'list', kind:'attestations' }),
+    api({ action:'list', kind:'clients' }), api({ action:'get', kind:'events', id:'liste' }).catch(() => ({ item:{ items:[] } })),
+  ]);
+  data.invoices = a.items; data.tickets = b.items; data.attestations = c.items; data.clients = d.items;
+  events = (e.item && e.item.items) || [];
+  render('invoices'); render('tickets'); render('attestations'); render('clients'); renderEvents();
+}
+
+// ── ÉVÉNEMENTS ──
+function renderEvents(){
+  const box = $('list-events');
+  if (!events.length) { box.innerHTML = '<div class="empty">Aucun événement. Ajoute-en un, ou attends la proposition du lundi.</div>'; }
+  else box.innerHTML = events.map((e,i) => `<div class="ev ${e.visible===false?'hidden-ev':''}">
+    <div class="handle">${i+1}</div>
+    <input placeholder="Titre" value="${esc(e.titre)}" oninput="events[${i}].titre=this.value">
+    <input placeholder="Sous-titre" value="${esc(e.sous)}" oninput="events[${i}].sous=this.value">
+    <div><input type="date" value="${esc(e.date)}" oninput="events[${i}].date=this.value" title="Date (tri + expiration)"><input placeholder="Texte affiché (ex. 6 juin 2027)" value="${esc(e.dateTexte)}" oninput="events[${i}].dateTexte=this.value" style="margin-top:6px"></div>
+    <input placeholder="Lieu" value="${esc(e.lieu)}" oninput="events[${i}].lieu=this.value">
+    <div class="mini"><button title="Monter" onclick="moveEvent(${i},-1)">↑</button><button title="Descendre" onclick="moveEvent(${i},1)">↓</button><button title="${e.visible===false?'Afficher':'Masquer'}" onclick="events[${i}].visible=!(events[${i}].visible!==false);renderEvents()">👁</button><button title="Supprimer" onclick="if(confirm('Supprimer cet événement ?')){events.splice(${i},1);renderEvents()}">✕</button></div>
+  </div>`).join('');
+  const today = new Date().toISOString().slice(0,10);
+  const live = events.filter(e => e.visible!==false && (!e.date || e.date >= today)).length;
+  $('stat-events').textContent = live + ' affiché' + (live>1?'s':'') + ' sur le site';
+}
+function addEvent(){ events.push({ titre:'', sous:'', date:'', dateTexte:'', lieu:'', visible:true }); renderEvents(); window.scrollTo(0, document.body.scrollHeight); }
+function moveEvent(i, d){ const j = i + d; if (j < 0 || j >= events.length) return; [events[i], events[j]] = [events[j], events[i]]; renderEvents(); }
+async function saveEvents(){
+  const clean = events.filter(e => (e.titre||'').trim());
+  try {
+    const cur = await api({ action:'get', kind:'events', id:'liste' }).catch(() => null);
+    await api({ action:'save', kind:'events', id:'liste', data:{ items: clean } });
+    events = clean; renderEvents(); toast('✅ Événements publiés sur le site');
+  } catch(e) { toast('❌ ' + e.message); }
+}
+
+// ── CLIENTS ──
+function cardClient(x){
+  return `<div class="card">
+    <div class="info"><div><div class="title">${esc(x.nom)}</div><div class="meta">${[x.adresse, x.ville, x.email, x.tel, x.tva?'N° '+x.tva:''].filter(Boolean).map(esc).join(' · ')}</div></div></div>
+    <div class="actions"><button class="btn" onclick="editClient('${esc(x.id)}')">Modifier</button><button class="btn" onclick="delClient('${esc(x.id)}')">Supprimer</button></div>
+  </div>`;
+}
+function editClient(id){
+  const c = data.clients.find(x => x.id === id); if (!c) return;
+  const raw = prompt('Infos du client (une par ligne : nom, adresse, ville, e-mail, téléphone, TVA) :', [c.nom, c.adresse, c.ville, c.email, c.tel, c.tva].filter(Boolean).join('\n'));
+  if (raw === null) return;
+  const l = raw.split('\n').map(t => t.trim());
+  const upd = { ...c, nom:l[0]||c.nom, adresse:l[1]||'', ville:l[2]||'', email:(l.find(t=>t.includes('@'))||''), tel:(l.find(t=>/^\+?[\d\s().-]{8,}$/.test(t))||''), tva:(l.find(t=>/^[A-Z]{1,2}\d{6,13}$/i.test(t))||'') };
+  api({ action:'save', kind:'clients', id, data:upd }).then(() => { Object.assign(c, upd); render('clients'); toast('✅ Client mis à jour'); }).catch(e => toast('❌ ' + e.message));
+}
+function delClient(id){
+  if (!confirm('Supprimer cette fiche client ? (les factures restent)')) return;
+  api({ action:'save', kind:'clients', id, data:{ deleted:true, nom:'' } }).then(() => { data.clients = data.clients.filter(x => x.id !== id); render('clients'); }).catch(e => toast('❌ ' + e.message));
+}
+function showView(v, btn){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(e=>e.classList.remove('active'));
+  $('view-'+v).classList.add('active'); if (btn) btn.classList.add('active');
+}
+function matches(obj, q){ return !q || JSON.stringify(obj).toLowerCase().includes(q.toLowerCase()); }
+
+function render(kind){
+  const q = $('q-'+kind).value.trim();
+  const items = data[kind].filter(x => !x.deleted && matches(x, q));
+  $('stat-'+kind).textContent = items.length + ' / ' + data[kind].length;
+  const box = $('list-'+kind);
+  if (!items.length) { box.innerHTML = '<div class="empty">Rien pour l\'instant.</div>'; return; }
+  box.innerHTML = items.map(x => kind==='invoices' ? cardInvoice(x) : kind==='tickets' ? cardTicket(x) : kind==='clients' ? cardClient(x) : cardAttestation(x)).join('');
+}
+
+function cardInvoice(x){
+  const tags = (x.compte==='inflow' ? '<span class="tag">Inflow</span>' : '<span class="tag">Qonto</span>') + (x.statut==='regle' ? '<span class="tag ok">Payée</span>' : '') + (x.sent ? '<span class="tag ok">Envoyée</span>' : '');
+  return `<div class="card">
+    <div class="info"><div class="num">N°${esc(x.num)}</div><div><div class="title">${esc(x.client)}${tags}</div><div class="meta">${esc(x.event||'')}${x.eventdate?' · '+esc(x.eventdate):''}${x.email?' · '+esc(x.email):''}</div></div></div>
+    <div style="display:flex;align-items:center;gap:16px"><div><div class="amount">${fmt(x.total)}</div><div class="date">${when(x.date)}</div></div>
+    <div class="actions">${x.fileKey?`<button class="btn" onclick="dl('invoices','${esc(x.id)}')">↓ PDF</button>`:''}<a class="btn" href="/factures.html">Dupliquer</a></div></div>
+  </div>`;
+}
+function cardTicket(x){
+  const lab = {transfert:'Transfert', pdf:'PDF', mobile:'Lien mobile'}[x.mode] || x.mode || '';
+  return `<div class="card">
+    <div class="info"><div><div class="title">${esc(x.client)} <span style="font-weight:400;color:#888">· ${esc(x.to)}</span><span class="tag">${esc(lab)}</span></div><div class="meta">${esc(x.evenement||'')}${x.date?' · '+esc(x.date):''}${x.n?' · '+x.n+' fichier'+(x.n>1?'s':''):''}</div></div></div>
+    <div style="display:flex;align-items:center;gap:16px"><div class="date">${whenT(x.when||x.savedAt)}</div>
+    <div class="actions"><a class="btn" href="/places.html#reprendre=${encodeURIComponent(x.id)}">Reprendre</a></div></div>
+  </div>`;
+}
+function cardAttestation(x){
+  const lignes = (x.billets||[]).map(b => `${esc(b.desc||'Billet')} : ${b.qte} × ${fmt(b.prix)}`).join('<br>');
+  return `<details>
+    <summary><div class="card">
+      <div class="info"><div><div class="title">${esc(x.vendeur)}</div><div class="meta">${esc(x.evenement||'')}${x.email?' · '+esc(x.email):''}${x.tel?' · '+esc(x.tel):''}</div></div></div>
+      <div style="display:flex;align-items:center;gap:16px"><div><div class="amount">${fmt(x.total)}</div><div class="date">${whenT(x.savedAt)}</div></div>
+      <div class="actions">${x.fileKey?`<button class="btn" onclick="event.preventDefault();dl('attestations','${esc(x.id)}')">↓ PDF</button>`:''}</div></div>
+    </div></summary>
+    <div class="body">
+      <b>Virement à faire</b><br>Titulaire : ${esc(x.titulaire)}<br>IBAN : <b>${esc(x.iban)}</b>${x.bic?'<br>BIC : '+esc(x.bic):''}<br><br>
+      <b>Billets cédés</b><br>${lignes||'—'}<br><br>
+      ${x.adresse?'Adresse : '+esc(x.adresse)+'<br>':''}${x.date?'Date de la transaction : '+esc(x.date):''}
+    </div>
+  </details>`;
+}
+
+async function dl(kind, id){
+  try {
+    const res = await api({ action:'get', kind, id });
+    if (!res.pdfBase64) { toast('Pas de PDF pour cet enregistrement'); return; }
+    const bytes = Uint8Array.from(atob(res.pdfBase64), c => c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type:'application/pdf' }));
+    const a = document.createElement('a'); a.href = url; a.download = res.item.filename || (kind==='invoices' ? `Facture_${res.item.num}.pdf` : 'attestation.pdf'); a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch(e) { toast('❌ ' + e.message); }
+}
+
+window.addEventListener('load', () => { if (pin) { $('pin').value = pin; unlock(); } });
+</script>
+</body>
+</html>

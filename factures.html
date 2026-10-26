@@ -200,6 +200,10 @@
     <!-- Client paste zone -->
     <div class="card">
       <div class="card-title">Destinataire</div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>Client enregistré</label>
+        <select id="f-client-saved" onchange="pickClient(this.value)"><option value="">— Nouveau client (colle ses infos ci-dessous) —</option></select>
+      </div>
       <div class="form-group">
         <label>Colle les infos du client ici</label>
         <textarea id="f-paste" placeholder="Ex:&#10;Capitis&#10;30 Avenue Alfred Belmontet&#10;92210 Saint-Cloud&#10;contact@capitis.fr&#10;+33 1 23 45 67 89&#10;TVA : FR17814122974" oninput="updateMainButton();parseClient(this.value)"></textarea>
@@ -245,6 +249,15 @@
     <!-- Paiement -->
     <div class="card">
       <div class="card-title">Paiement</div>
+      <div class="form-row two" style="margin-bottom:14px;">
+        <div class="form-group">
+          <label>Compte à créditer</label>
+          <select id="f-compte" onchange="applyCompte(this.value)">
+            <option value="qonto">Qonto — EI ELGRABLY Samuel / GRABLY EVENT</option>
+            <option value="inflow">Inflow — Samuel Elgrably</option>
+          </select>
+        </div>
+      </div>
       <div class="form-row two">
         <div class="form-group">
           <label>IBAN</label>
@@ -334,6 +347,7 @@ function parseClient(raw) {
       /^\d+\s+\S/.test(line) ||
       /^(rue|avenue|av|bd|boulevard|chemin|place|impasse|allée|cours|passage|calle|carrer|camino|via|viale|street|road|lane|drive|avenida|ctra|carretera|rambla|paseo|plaza)/i.test(line) ||
       /,\s*\d+$/.test(line) || // "AV DE LAS JACARANDAS, 2"
+      /^[A-Za-zÀ-ÿ'’.\s]{3,}\s\d{1,4}(?:[-\/]\d{1,4})?\s*[A-Za-z]?$/.test(line) || // "Joan de Borbo 16-18", "Gran Via 12"
       /\b(rue|avenue|av\.|bd|boulevard|chemin|place|impasse|allée|cours|passage|calle|carrer|camino|via|viale|street|road|lane|drive|avenida|paseo|plaza)\b/i.test(line)
     )) {
       parsedClient.addr = line; return;
@@ -779,7 +793,7 @@ async function generateInvoice(mode='auto') {
   if (mode === 'auto' && email) {
     const btn = document.getElementById('btn-main'); btn.disabled = true; btn.textContent = 'Envoi en cours…';
     try {
-      const sent = await sendInvoiceByEmail({ to: email, client, num, total: fmt(total), date: dateStr, due: dueStr, filename, pdfBase64: doc.output('datauristring').split(',')[1], lang: document.getElementById('f-lang').value });
+      const sent = await sendInvoiceByEmail({ to: email, client, num, total: fmt(total), date: dateStr, due: dueStr, filename, pdfBase64: doc.output('datauristring').split(',')[1], lang: document.getElementById('f-lang').value, compte: document.getElementById('f-compte').value });
       if (!sent) { btn.disabled = false; updateMainButton(); return; }
       toast('✅ Facture envoyée à ' + email, 4000);
     } catch (e) {
@@ -791,10 +805,12 @@ async function generateInvoice(mode='auto') {
     download();
   }
 
-  // Save
+  // Save (navigateur + base de données du site)
   const invoice = {
     num:+num, client, email, addr, city, tva, tel, siren,
-    event, eventdate, iban, benef, date, due, total,
+    event, eventdate, iban, bic, benef, compte: document.getElementById('f-compte').value,
+    statut, datepaiement, lang: document.getElementById('f-lang').value,
+    date, due, total, sent: !!(mode === 'auto' && email),
     lignes: JSON.parse(JSON.stringify(lignes)),
     createdAt: new Date().toISOString(),
     raw: document.getElementById('f-paste').value
@@ -804,6 +820,8 @@ async function generateInvoice(mode='auto') {
   if(idx>=0) stored[idx]=invoice; else stored.unshift(invoice);
   stored.sort((a,b)=>b.num-a.num);
   localStorage.setItem('ge_invoices', JSON.stringify(stored));
+  saveToDb('invoices', { ...invoice, filename }, doc.output('datauristring').split(',')[1], 'facture-' + num);
+  saveClientFromInvoice(invoice);
 
   if (!(mode === 'auto' && email)) toast('✅ Facture générée !');
   updateMainButton();
@@ -812,51 +830,130 @@ async function generateInvoice(mode='auto') {
   document.getElementById('f-num').value = +num+1;
 }
 
+// ── COMPTES BANCAIRES ──
+const COMPTES = {
+  qonto:  { iban:'FR76 1695 8000 0192 8674 6101 065', bic:'QNTOFRP1XXX', benef:'EI - ELGRABLY Samuel / GRABLY EVENT' },
+  inflow: { iban:'LU98 4080 0000 2920 2445',          bic:'BCIRLULL',    benef:'Samuel Elgrably' },
+};
+function applyCompte(key){
+  const c = COMPTES[key]; if(!c) return;
+  document.getElementById('f-iban').value = c.iban;
+  document.getElementById('f-bic').value = c.bic;
+  document.getElementById('f-benef').value = c.benef;
+}
+
+// ── BASE DE DONNÉES DU SITE (Netlify) ──
+async function dbCall(payload){
+  const pin = getPin(false); if(!pin) return null;
+  const r = await fetch('/.netlify/functions/records', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ...payload, pin }) });
+  if (r.status === 401) { localStorage.removeItem('ge_pin'); throw new Error('code d\'envoi incorrect'); }
+  if (!r.ok) throw new Error((await r.text()).slice(0,160) || ('erreur ' + r.status));
+  return r.json();
+}
+function saveToDb(kind, data, pdfBase64, id){
+  // En arrière-plan : la facture est déjà générée, on ne bloque pas l'utilisateur.
+  dbCall({ action:'save', kind, data, pdfBase64, id }).catch(e => console.warn('Base :', e.message));
+}
+let dbInvoices = null;
+let dbClients = [];
+function clientKey(name){ return String(name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60) || 'client'; }
+function fillClientSelect(){
+  const sel = document.getElementById('f-client-saved'); const cur = sel.value;
+  sel.innerHTML = '<option value="">— Nouveau client (colle ses infos ci-dessous) —</option>' +
+    dbClients.filter(c=>!c.deleted && c.nom).sort((a,b)=>a.nom.localeCompare(b.nom,'fr')).map(c=>`<option value="${c.id}">${c.nom.replace(/[<>&"]/g,'')}</option>`).join('');
+  sel.value = cur;
+}
+async function loadClients(){
+  try { const res = await dbCall({ action:'list', kind:'clients' }); if (res) { dbClients = res.items; fillClientSelect(); } } catch(e) {}
+}
+function pickClient(id){
+  const c = dbClients.find(x=>x.id===id); if(!c) return;
+  const raw = [c.nom, c.adresse, c.ville, c.email, c.tel, c.tva?('TVA : '+c.tva):''].filter(Boolean).join('\n');
+  document.getElementById('f-paste').value = raw; parseClient(raw);
+  if (c.pays) document.getElementById('f-country').value = c.pays;
+  updateMainButton();
+}
+function saveClientFromInvoice(inv){
+  if (!inv.client) return;
+  const id = clientKey(inv.client);
+  const pays = document.getElementById('f-country').value.trim();
+  const ville = String(inv.city||'').replace(new RegExp(',\\s*' + pays.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\s*$'), '').trim();
+  const data = { nom: inv.client, adresse: inv.addr||'', ville, email: inv.email||'', tel: inv.tel||'', tva: inv.tva||'', pays, lastInvoice: inv.num };
+  dbCall({ action:'save', kind:'clients', id, data }).then(res => { if(res){ const i = dbClients.findIndex(c=>c.id===id); if(i>=0) dbClients[i]=res.item; else dbClients.push(res.item); fillClientSelect(); } }).catch(()=>{});
+}
+
 // ── LIST ──
-function loadInvoices() {
-  const container = document.getElementById('invoices-list');
+function allInvoices(){
   const stored = JSON.parse(localStorage.getItem('ge_invoices')||'[]');
-  if(!stored.length){
+  const byNum = new Map();
+  (dbInvoices||[]).forEach(i => byNum.set(+i.num, { ...i, fromDb:true }));
+  stored.forEach(i => { if(!byNum.has(+i.num)) byNum.set(+i.num, i); });
+  return [...byNum.values()].sort((a,b)=>b.num-a.num);
+}
+async function loadInvoices() {
+  const container = document.getElementById('invoices-list');
+  container.innerHTML = '<div class="empty-state"><p>Chargement…</p></div>';
+  try { const res = await dbCall({ action:'list', kind:'invoices' }); if (res) dbInvoices = res.items; }
+  catch(e) { toast('Base inaccessible : ' + e.message + ' (affichage de ce navigateur seulement)', 5000); }
+  const list = allInvoices();
+  if(!list.length){
     container.innerHTML=`<div class="empty-state"><div class="icon">🧾</div><p>Aucune facture pour l'instant.</p></div>`;
     return;
   }
+  const escH = t => String(t||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   container.innerHTML='';
-  stored.forEach(inv=>{
+  list.forEach(inv=>{
     const card=document.createElement('div'); card.className='invoice-card';
     const d=inv.date?new Date(inv.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}):'';
+    const tags = [inv.compte==='inflow'?'Inflow':'Qonto', inv.statut==='regle'?'Payée':'', inv.sent?'Envoyée':''].filter(Boolean).join(' · ');
     card.innerHTML=`
       <div class="invoice-info">
-        <div class="invoice-num">N°${inv.num}</div>
+        <div class="invoice-num">N°${escH(inv.num)}</div>
         <div>
-          <div class="invoice-client">${inv.client}</div>
-          <div class="invoice-event">${inv.event||''}${inv.eventdate?' · '+inv.eventdate:''}</div>
+          <div class="invoice-client">${escH(inv.client)}</div>
+          <div class="invoice-event">${escH(inv.event||'')}${inv.eventdate?' · '+escH(inv.eventdate):''}<span style="color:#aaa"> · ${tags}</span></div>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:20px">
         <div><div class="invoice-amount">${fmt(inv.total)}</div><div class="invoice-date">${d}</div></div>
         <div class="invoice-actions">
-          <button class="btn-icon" onclick="redownload(${inv.num})">↓ PDF</button>
-          <button class="btn-icon" onclick="duplicate(${inv.num})">Dupliquer</button>
+          <button class="btn-icon" onclick="redownload(${+inv.num})">↓ PDF</button>
+          <button class="btn-icon" onclick="duplicate(${+inv.num})">Dupliquer</button>
         </div>
       </div>`;
     container.appendChild(card);
   });
 }
 
-function redownload(num){
-  const stored=JSON.parse(localStorage.getItem('ge_invoices')||'[]');
-  const inv=stored.find(i=>i.num===num);
+async function redownload(num){
+  const inv=allInvoices().find(i=>+i.num===num);
   if(!inv){toast('Introuvable');return;}
+  // Si le PDF d'origine est en base, on le rend tel quel (identique à celui envoyé au client).
+  if (inv.fromDb && inv.fileKey) {
+    try {
+      const res = await dbCall({ action:'get', kind:'invoices', id: inv.id });
+      if (res && res.pdfBase64) {
+        const bytes = Uint8Array.from(atob(res.pdfBase64), c => c.charCodeAt(0));
+        const url = URL.createObjectURL(new Blob([bytes], { type:'application/pdf' }));
+        const a = document.createElement('a'); a.href = url; a.download = `Facture_${num}_${(inv.client||'').replace(/[^a-zA-Z0-9]/g,'')}.pdf`; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        return;
+      }
+    } catch(e) { console.warn(e); }
+  }
   fillForm(inv); showView('new'); setTimeout(()=>generateInvoice('download'),200);
 }
 
 function duplicate(num){
-  const stored=JSON.parse(localStorage.getItem('ge_invoices')||'[]');
-  const inv=stored.find(i=>i.num===num);
+  const list=allInvoices();
+  const inv=list.find(i=>+i.num===num);
   if(!inv){return;}
   fillForm(inv);
-  const nums=stored.map(i=>i.num); const max=Math.max(...nums);
+  const max=Math.max(...list.map(i=>+i.num));
   document.getElementById('f-num').value=max+1;
+  const today=new Date(); const tom=new Date(today); tom.setDate(tom.getDate()+1);
+  document.getElementById('f-date').value=today.toISOString().slice(0,10);
+  document.getElementById('f-due').value=tom.toISOString().slice(0,10);
   showView('new');
 }
 
@@ -868,8 +965,12 @@ function fillForm(inv){ setTimeout(updateMainButton, 50);
   document.getElementById('f-eventdate').value=inv.eventdate||'';
   document.getElementById('f-eventdate-preview').textContent='';
   document.getElementById('f-eventdate-preview').dataset.formatted=inv.eventdate||'';
-  document.getElementById('f-iban').value=inv.iban||'';
-  document.getElementById('f-benef').value=inv.benef||'';
+  document.getElementById('f-compte').value = inv.compte || (inv.iban && inv.iban.replace(/\s/g,'').startsWith('LU') ? 'inflow' : 'qonto');
+  applyCompte(document.getElementById('f-compte').value);
+  if(inv.iban) document.getElementById('f-iban').value=inv.iban;
+  if(inv.bic) document.getElementById('f-bic').value=inv.bic;
+  if(inv.benef) document.getElementById('f-benef').value=inv.benef;
+  if(inv.lang) document.getElementById('f-lang').value=inv.lang;
   if(inv.raw){ document.getElementById('f-paste').value=inv.raw; parseClient(inv.raw); }
   else {
     const lines=[inv.client,inv.addr,inv.city,inv.email,inv.tel,inv.tva?'TVA : '+inv.tva:''].filter(Boolean).join('\n');
@@ -923,15 +1024,21 @@ window.addEventListener('load',()=>{
   document.getElementById('f-date').value=today.toISOString().slice(0,10);
   document.getElementById('f-due').value=tom.toISOString().slice(0,10);
 
-  // Auto-increment from last saved
+  // Numéro suivant : d'après ce navigateur tout de suite, puis d'après la base
+  // du site (pour que le numéro soit juste depuis n'importe quel appareil).
   const stored=JSON.parse(localStorage.getItem('ge_invoices')||'[]');
-  if(stored.length){
-    const max=Math.max(...stored.map(i=>i.num));
-    document.getElementById('f-num').value=max+1;
-  } else {
-    document.getElementById('f-num').value=147;
+  document.getElementById('f-num').value = stored.length ? Math.max(...stored.map(i=>+i.num))+1 : 147;
+  if (localStorage.getItem('ge_pin')) {
+    dbCall({ action:'list', kind:'invoices' }).then(res => {
+      if (!res || !res.items.length) return;
+      dbInvoices = res.items;
+      const max = Math.max(...allInvoices().map(i=>+i.num));
+      if (max + 1 > +document.getElementById('f-num').value) document.getElementById('f-num').value = max + 1;
+    }).catch(()=>{});
   }
 
+  applyCompte('qonto');
+  if (localStorage.getItem('ge_pin')) loadClients();
   addLigne();
 });
 </script>
