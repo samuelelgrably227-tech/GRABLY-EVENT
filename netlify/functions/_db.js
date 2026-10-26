@@ -9,8 +9,8 @@ function init(event) {
   try { if (event && event.blobs) connectLambda(event); } catch (e) { /* ignoré */ }
 }
 
-const records = () => getStore({ name: 'records', consistency: 'strong' });
-const files = () => getStore({ name: 'files', consistency: 'strong' });
+const records = () => getStore({ name: 'records' });
+const files = () => getStore({ name: 'files' });
 
 const KINDS = ['invoices', 'tickets', 'attestations', 'events', 'clients'];
 
