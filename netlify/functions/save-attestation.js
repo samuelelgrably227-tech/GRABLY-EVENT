@@ -6,6 +6,7 @@ const db = require('./_db');
 const lastByIp = new Map();
 
 exports.handler = async (event) => {
+  db.init(event);
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Méthode non autorisée' };
   const ip = (event.headers['x-nf-client-connection-ip'] || event.headers['client-ip'] || '').toString();
   const now = Date.now();
