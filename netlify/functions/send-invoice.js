@@ -41,7 +41,7 @@ exports.handler = async (event) => {
     body: JSON.stringify({
       from: 'Grably Event <facture@grablyevent.com>',
       to: [b.to],
-      bcc: ['contact@grablyevent.com'],
+      bcc: b.compte === 'inflow' ? ['contact@grablyevent.com'] : ['contact@grablyevent.com', 'receipts-gdks-qrve@inbox.qonto.com'],
       reply_to: 'contact@grablyevent.com',
       subject,
       html,
