@@ -4,6 +4,7 @@
 const db = require('./_db');
 
 exports.handler = async (event) => {
+  db.init(event);
   if (event.httpMethod !== 'GET') return { statusCode: 405, body: 'Méthode non autorisée' };
   try {
     const rec = await db.getRecord('events', 'liste').catch(() => null);
