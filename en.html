@@ -130,6 +130,10 @@
   .events{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin-top:2.5rem}
   .event{display:flex;flex-direction:column;gap:.55rem;padding:1.5rem 1.4rem;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper);text-decoration:none;color:var(--ink);transition:transform .5s var(--ease),border-color .3s}
   .event:hover{transform:translateY(-3px);border-color:var(--ink)}
+  .event .ph{margin:-1.5rem -1.4rem .5rem;aspect-ratio:16/9;overflow:hidden;border-radius:var(--radius) var(--radius) 0 0;background:var(--paper-2);display:flex;align-items:center;justify-content:center}
+  .event .ph img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .8s var(--ease)}
+  .event:hover .ph img{transform:scale(1.04)}
+  .event .ph span{font-family:var(--serif);font-style:italic;font-size:1.6rem;color:var(--ink-2);opacity:.55}
   .event .when{font-size:.8rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
   .event h3{font-size:1.5rem;line-height:1.1}
   .event p{color:var(--ink-2);font-size:.95rem;margin:0}
@@ -538,6 +542,7 @@
         const msg = "Hello Grably Event, I would like to arrange an experience for: " + e.titre + (e.dateTexte ? " (" + e.dateTexte + ")" : "") + ".";
         const href = "https://wa.me/" + WHATSAPP_NUMBER + "?text=" + encodeURIComponent(msg);
         return `<a class="event reveal in" href="${href}" target="_blank" rel="noopener">
+          <div class="ph">${e.image ? `<img src="${esc(e.image)}" alt="${esc(e.titre)}" loading="lazy" decoding="async">` : `<span>Grably Event</span>`}</div>
           <span class="when">${esc(e.dateTexte || e.date)}${e.lieu ? " · " + esc(e.lieu) : ""}</span>
           <h3>${esc(e.titre)}</h3>${e.sous ? `<p>${esc(e.sous)}</p>` : ""}
           <span class="cta"><svg><use href="#wa"/></svg>Request this experience</span></a>`;

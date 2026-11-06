@@ -197,14 +197,14 @@ function renderEvents(){
     <input placeholder="Titre" value="${esc(e.titre)}" oninput="events[${i}].titre=this.value">
     <input placeholder="Sous-titre" value="${esc(e.sous)}" oninput="events[${i}].sous=this.value">
     <div><input type="date" value="${esc(e.date)}" oninput="events[${i}].date=this.value" title="Date (tri + expiration)"><input placeholder="Texte affiché (ex. 6 juin 2027)" value="${esc(e.dateTexte)}" oninput="events[${i}].dateTexte=this.value" style="margin-top:6px"></div>
-    <input placeholder="Lieu" value="${esc(e.lieu)}" oninput="events[${i}].lieu=this.value">
+    <div><input placeholder="Lieu" value="${esc(e.lieu)}" oninput="events[${i}].lieu=this.value"><input placeholder="Image (lien https://…)" value="${esc(e.image)}" oninput="events[${i}].image=this.value.trim();this.nextElementSibling.src=this.value.trim();this.nextElementSibling.style.display=this.value.trim()?'block':'none'" style="margin-top:6px"><img src="${esc(e.image)}" alt="" style="display:${e.image?'block':'none'};margin-top:6px;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:6px" onerror="this.style.display='none'"></div>
     <div class="mini"><button title="Monter" onclick="moveEvent(${i},-1)">↑</button><button title="Descendre" onclick="moveEvent(${i},1)">↓</button><button title="${e.visible===false?'Afficher':'Masquer'}" onclick="events[${i}].visible=!(events[${i}].visible!==false);renderEvents()">👁</button><button title="Supprimer" onclick="if(confirm('Supprimer cet événement ?')){events.splice(${i},1);renderEvents()}">✕</button></div>
   </div>`).join('');
   const today = new Date().toISOString().slice(0,10);
   const live = events.filter(e => e.visible!==false && (!e.date || e.date >= today)).length;
   $('stat-events').textContent = live + ' affiché' + (live>1?'s':'') + ' sur le site';
 }
-function addEvent(){ events.push({ titre:'', sous:'', date:'', dateTexte:'', lieu:'', visible:true }); renderEvents(); window.scrollTo(0, document.body.scrollHeight); }
+function addEvent(){ events.push({ titre:'', sous:'', date:'', dateTexte:'', lieu:'', image:'', visible:true }); renderEvents(); window.scrollTo(0, document.body.scrollHeight); }
 function moveEvent(i, d){ const j = i + d; if (j < 0 || j >= events.length) return; [events[i], events[j]] = [events[j], events[i]]; renderEvents(); }
 async function saveEvents(){
   const clean = events.filter(e => (e.titre||'').trim());
