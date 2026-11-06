@@ -11,7 +11,7 @@ exports.handler = async (event) => {
     const today = new Date().toISOString().slice(0, 10);
     const items = ((rec && rec.items) || [])
       .filter(e => e && e.titre && (!e.date || e.date >= today) && e.visible !== false)
-      .map(e => ({ titre: String(e.titre).slice(0, 120), sous: String(e.sous || '').slice(0, 160), date: String(e.date || '').slice(0, 10), dateTexte: String(e.dateTexte || '').slice(0, 80), lieu: String(e.lieu || '').slice(0, 120), tag: String(e.tag || '').slice(0, 40) }))
+      .map(e => ({ titre: String(e.titre).slice(0, 120), sous: String(e.sous || '').slice(0, 160), date: String(e.date || '').slice(0, 10), dateTexte: String(e.dateTexte || '').slice(0, 80), lieu: String(e.lieu || '').slice(0, 120), tag: String(e.tag || '').slice(0, 40), image: /^https:\/\//.test(e.image || '') ? String(e.image).slice(0, 500) : '' }))
       .slice(0, 8);
     return {
       statusCode: 200,
