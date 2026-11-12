@@ -1,6 +1,6 @@
 // Envoi d'un e-mail libre avec pièces jointes (devis, documents…) depuis contact@grablyevent.com.
 // Protégé par le code d'envoi (INVOICE_PIN), comme send-invoice.
-//   POST { pin, to, subject, intro, lines:[...], filesBase64:[{ filename, content }], copy?:true }
+//   POST { pin, to, subject, intro, lines:[...], filesBase64:[{ filename, content }], copy?:true, scheduledAt?:ISO }
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Méthode non autorisée' };
   const key = process.env.RESEND_API_KEY;
@@ -16,6 +16,17 @@ exports.handler = async (event) => {
   const total = files.reduce((s, f) => s + String(f.content || '').length, 0);
   if (files.length > 15 || total > 30_000_000) return { statusCode: 400, body: 'Pièces jointes trop lourdes' };
   if (!b.subject || String(b.subject).length > 200) return { statusCode: 400, body: 'Objet manquant' };
+
+  // Envoi programmé (facultatif) : date ISO, entre 1 minute et 30 jours dans le futur.
+  let scheduledAt = null;
+  if (b.scheduledAt) {
+    const d = new Date(b.scheduledAt);
+    if (isNaN(d)) return { statusCode: 400, body: 'Date d\'envoi invalide' };
+    const delta = d.getTime() - Date.now();
+    if (delta < 60_000) return { statusCode: 400, body: 'La date d\'envoi doit être dans le futur' };
+    if (delta > 30 * 86_400_000) return { statusCode: 400, body: 'Envoi programmé : 30 jours maximum' };
+    scheduledAt = d.toISOString();
+  }
 
   const esc = (t) => String(t || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const paras = [b.intro, ...(Array.isArray(b.lines) ? b.lines : [])].filter(Boolean)
@@ -42,6 +53,7 @@ exports.handler = async (event) => {
       bcc: b.copy === false ? [] : ['contact@grablyevent.com'],
       reply_to: 'contact@grablyevent.com',
       subject: String(b.subject),
+      ...(scheduledAt ? { scheduled_at: scheduledAt } : {}),
       html,
       attachments: files.map(f => ({ filename: String(f.filename || 'document.pdf').slice(0, 120), content: String(f.content) })),
     }),
@@ -50,5 +62,5 @@ exports.handler = async (event) => {
     const t = await r.text();
     return { statusCode: 502, body: 'Resend : ' + t.slice(0, 300) };
   }
-  return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true }) };
+  return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, scheduledAt }) };
 };
