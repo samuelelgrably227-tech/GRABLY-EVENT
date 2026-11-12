@@ -69,7 +69,7 @@
   .mail-form label { display:block; font-size:10px; font-weight:700; color:var(--gray); text-transform:uppercase; letter-spacing:.5px; margin:14px 0 5px; }
   .mail-form label:first-child { margin-top:0; }
   .mail-form .hint-inline { text-transform:none; font-weight:400; letter-spacing:0; }
-  .mail-form input[type=text], .mail-form textarea { width:100%; box-sizing:border-box; border:1.5px solid var(--lgray); border-radius:8px; padding:9px 12px; font-size:14px; font-family:inherit; outline:none; }
+  .mail-form input[type=text], .mail-form input[type=datetime-local], .mail-form textarea { width:100%; box-sizing:border-box; border:1.5px solid var(--lgray); border-radius:8px; padding:9px 12px; font-size:14px; font-family:inherit; outline:none; }
   .mail-form input:focus, .mail-form textarea:focus { border-color:var(--black); }
   .mail-form textarea { resize:vertical; line-height:1.5; }
   .mail-form input[type=file] { font-size:13px; }
@@ -145,6 +145,8 @@
         <label>Pièces jointes</label>
         <input id="m-files" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx">
         <div id="m-list" class="hint"></div>
+        <label>Envoi programmé <span class="hint-inline">(laisser vide pour envoyer tout de suite · 30 jours maximum)</span></label>
+        <input id="m-when" type="datetime-local">
         <button class="btn-primary inline" id="m-send" onclick="sendMail()">Envoyer</button>
       </div>
     </div>
@@ -249,18 +251,27 @@ async function sendMail(){
   if (!to.length) return toast('❌ Indique au moins un destinataire');
   if (!subject) return toast('❌ Indique un objet');
   if (!body && !files.length) return toast('❌ Message vide et aucune pièce jointe');
-  if (!confirm('Envoyer à ' + to.join(', ') + (files.length ? ' avec ' + files.length + ' pièce(s) jointe(s)' : '') + ' ?')) return;
-  const btn = $('m-send'); btn.disabled = true; btn.textContent = 'Envoi…';
+  let scheduledAt = '', whenTxt = '';
+  if ($('m-when').value) {
+    const d = new Date($('m-when').value);
+    if (isNaN(d)) return toast('❌ Date d\'envoi invalide');
+    if (d.getTime() < Date.now() + 2 * 60000) return toast('❌ Choisis une heure dans le futur (au moins 2 minutes)');
+    if (d.getTime() > Date.now() + 30 * 86400000) return toast('❌ 30 jours maximum à l\'avance');
+    scheduledAt = d.toISOString();
+    whenTxt = d.toLocaleString('fr-FR', { weekday:'long', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit' });
+  }
+  if (!confirm((scheduledAt ? 'Programmer l\'envoi pour ' + whenTxt + ' à ' : 'Envoyer à ') + to.join(', ') + (files.length ? ' avec ' + files.length + ' pièce(s) jointe(s)' : '') + ' ?')) return;
+  const btn = $('m-send'); btn.disabled = true; btn.textContent = scheduledAt ? 'Programmation…' : 'Envoi…';
   try {
     const filesBase64 = [];
     for (const f of files) filesBase64.push({ filename: f.name, content: await readB64(f) });
     const paras = body.split(/\n\s*\n/).map(t => t.trim()).filter(Boolean);
     const r = await fetch('/.netlify/functions/send-mail', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ pin, to, subject, intro: paras[0] || '', lines: paras.slice(1), filesBase64 }) });
+      body: JSON.stringify({ pin, to, subject, intro: paras[0] || '', lines: paras.slice(1), filesBase64, scheduledAt }) });
     if (r.status === 401) { localStorage.removeItem('ge_pin'); pin=''; throw new Error('code incorrect'); }
     if (!r.ok) throw new Error((await r.text()).slice(0,200));
-    toast('✅ E-mail envoyé à ' + to.join(', '));
-    $('m-files').value = ''; $('m-list').textContent = '';
+    toast(scheduledAt ? '✅ Envoi programmé pour ' + whenTxt : '✅ E-mail envoyé à ' + to.join(', '), 6000);
+    $('m-files').value = ''; $('m-list').textContent = ''; $('m-when').value = '';
   } catch (e) { toast('❌ ' + e.message, 6000); }
   btn.disabled = false; btn.textContent = 'Envoyer';
 }
